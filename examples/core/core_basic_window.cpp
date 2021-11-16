@@ -92,6 +92,11 @@ struct Referential
 	Vector3 origin;
 	Vector3 i, j, k;
 };
+
+struct Capsule
+{
+
+};
 #pragma endregion
 
 #pragma region Conversions
@@ -301,6 +306,13 @@ bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& inte
 }
 
 bool InterSegmentInfiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
+	return false;
+}
+
+bool InterSegmentFiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
+	return false;
+}
+bool InterSegmentCapsule(Segment seg, Capsule capsule, Vector3& interPt, Vector3& interNormal) {
 	return false;
 }
 
