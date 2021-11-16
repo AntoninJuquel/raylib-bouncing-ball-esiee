@@ -238,11 +238,11 @@ void MyDrawQuadWire(Vector3 center, Vector2 size, Color color) {
 
 #pragma region Intersections
 bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interNormal) {
-
+	return false;
 }
 
 bool InterSegPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
-
+	return false;
 }
 #pragma endregion
 
