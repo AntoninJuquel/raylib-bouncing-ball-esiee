@@ -251,7 +251,7 @@ int main(int argc, char* argv[])
 {
 	// Initialization
 	//--------------------------------------------------------------------------------------
-	float screenSizeCoef = 1.4f;
+	float screenSizeCoef = 0.7f;
 	const int screenWidth = 1920 * screenSizeCoef;
 	const int screenHeight = 1080 * screenSizeCoef;
 
