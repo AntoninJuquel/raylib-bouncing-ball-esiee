@@ -59,10 +59,24 @@ struct Spherical {
 	}
 
 };
+
+struct Segment
+{
+
+};
+
+struct Sphere
+{
+
+};
+
+struct Plane
+{
+
+};
 #pragma endregion
 
 #pragma region Conversions
-
 Cylindrical CartesianToCylindrical(Vector3 cart)
 {
 	Cylindrical cyl;
@@ -213,10 +227,23 @@ void MyDrawSphereWiresEx2(Quaternion q, Vector3 centerPos, float radius, int nSe
 	rlEnd();
 	rlPopMatrix();
 }
+
+void MyDrawQuad(Vector3 center, Vector2 size, Color color) {
+
+}
+void MyDrawQuadWire(Vector3 center, Vector2 size, Color color) {
+
+}
 #pragma endregion
 
 #pragma region Intersections
+bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interNormal) {
 
+}
+
+bool InterSegPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
+
+}
 #pragma endregion
 
 #pragma region Methods
@@ -321,48 +348,5 @@ int main(int argc, char* argv[])
 	//--------------------------------------------------------------------------------------
 
 	return 0;
-}
-
-// Draw sphere with extended parameters
-void MyDrawSphereEx(Vector3 centerPos, float radius, int rings, int slices, Color color)
-{
-	int numVertex = (rings + 2) * slices * 6;
-	if (rlCheckBufferLimit(numVertex)) rlglDraw();
-
-	rlPushMatrix();
-	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(centerPos.x, centerPos.y, centerPos.z);
-	rlScalef(radius, radius, radius);
-
-	rlBegin(RL_TRIANGLES);
-	rlColor4ub(color.r, color.g, color.b, color.a);
-
-	for (int i = 0; i < (rings + 2); i++)
-	{
-		for (int j = 0; j < slices; j++)
-		{
-			rlVertex3f(cosf(DEG2RAD * (270 + (180 / (rings + 1)) * i)) * sinf(DEG2RAD * (j * 360 / slices)),
-				sinf(DEG2RAD * (270 + (180 / (rings + 1)) * i)),
-				cosf(DEG2RAD * (270 + (180 / (rings + 1)) * i)) * cosf(DEG2RAD * (j * 360 / slices)));
-			rlVertex3f(cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))) * sinf(DEG2RAD * ((j + 1) * 360 / slices)),
-				sinf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))),
-				cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))) * cosf(DEG2RAD * ((j + 1) * 360 / slices)));
-			rlVertex3f(cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))) * sinf(DEG2RAD * (j * 360 / slices)),
-				sinf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))),
-				cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))) * cosf(DEG2RAD * (j * 360 / slices)));
-
-			rlVertex3f(cosf(DEG2RAD * (270 + (180 / (rings + 1)) * i)) * sinf(DEG2RAD * (j * 360 / slices)),
-				sinf(DEG2RAD * (270 + (180 / (rings + 1)) * i)),
-				cosf(DEG2RAD * (270 + (180 / (rings + 1)) * i)) * cosf(DEG2RAD * (j * 360 / slices)));
-			rlVertex3f(cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i))) * sinf(DEG2RAD * ((j + 1) * 360 / slices)),
-				sinf(DEG2RAD * (270 + (180 / (rings + 1)) * (i))),
-				cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i))) * cosf(DEG2RAD * ((j + 1) * 360 / slices)));
-			rlVertex3f(cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))) * sinf(DEG2RAD * ((j + 1) * 360 / slices)),
-				sinf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))),
-				cosf(DEG2RAD * (270 + (180 / (rings + 1)) * (i + 1))) * cosf(DEG2RAD * ((j + 1) * 360 / slices)));
-		}
-	}
-	rlEnd();
-	rlPopMatrix();
 }
 
