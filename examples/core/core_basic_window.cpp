@@ -286,6 +286,7 @@ int main(int argc, char* argv[])
 
 		float deltaTime = GetFrameTime();
 		float time = (float)GetTime();
+		Quaternion qOrient = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
 
@@ -298,6 +299,8 @@ int main(int argc, char* argv[])
 		BeginMode3D(camera);
 		{
 			//
+		MyDrawSphereEx2(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
+		MyDrawSphereWiresEx2(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
