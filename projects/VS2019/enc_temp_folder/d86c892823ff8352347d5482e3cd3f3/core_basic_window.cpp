@@ -357,8 +357,9 @@ int main(int argc, char* argv[])
 		BeginMode3D(camera);
 		{
 			//
-		MyDrawSphereEx2(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
-		MyDrawSphereWiresEx2(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+		//MyDrawSphereEx2(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
+		//MyDrawSphereWiresEx2(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+			MyDrawQuad(Vector3{ 0 }, Vector2{ 10, 10 }, BLUE);
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
