@@ -282,19 +282,65 @@ void MyDrawQuad(Quaternion q, Vector3 center, Vector2 size, Color color) {
 			float width = size.x;
 			float height = size.y;
 			float length = height;
-            rlVertex3f(center.x - width/2, center.y - height/2, center.z + length/2);  // Bottom Left
-            rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
-            rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y + height/2, center.z + length/2);  // Top Right
-            rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
+
+            // by default facing up 
+
+            rlVertex3f(center.x - width/2, center.y, center.z - length/2);  // Top Left
+            rlVertex3f(center.x - width/2, center.y, center.z + length/2);  // Bottom Left
+			rlVertex3f(center.x + width / 2, center.y, center.z + length / 2);  // Bottom Right
+
+            rlVertex3f(center.x + width/2, center.y, center.z - length/2);  // Top Right
+            rlVertex3f(center.x - width/2, center.y, center.z - length/2);  // Top Left
+            rlVertex3f(center.x + width/2, center.y, center.z + length/2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
 }
-void MyDrawQuadWire(Vector3 center, Vector2 size, Color color) {
+void MyDrawQuadWire(Quaternion q, Vector3 center, Vector2 size, Color color) {
 
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+	float width = size.x;
+	float height = size.y;
+	float length = height;
+
+    if (rlCheckBufferLimit(36)) rlglDraw();
+
+    rlPushMatrix();
+
+		rlTranslatef(center.x, center.y, center.z);
+	//ROTATION
+	Vector3 vect;
+	float angle;
+	QuaternionToAxisAngle(q, &vect, &angle);
+	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
+
+        rlBegin(RL_LINES);
+            rlColor4ub(color.r, color.g, color.b, color.a);
+
+            // facing up by default
+            // Left Line
+            rlVertex3f(x-width/2, y, z+length/2);  // Top Left Front
+            rlVertex3f(x-width/2, y, z-length/2);  // Top Left Back
+
+            // Right Line
+            rlVertex3f(x+width/2, y, z+length/2);  // Top Right Front
+            rlVertex3f(x+width/2, y, z-length/2);  // Top Right Back
+
+            // Bottom Face  ---------------------------------------------------
+            // Left Line
+            rlVertex3f(x-width/2, y, z+length/2);  // Top Left Front
+            rlVertex3f(x-width/2, y, z-length/2);  // Top Left Back
+
+            // Right Line
+            rlVertex3f(x+width/2, y, z+length/2);  // Top Right Front
+            rlVertex3f(x+width/2, y, z-length/2);  // Top Right Back
+        rlEnd();
+    rlPopMatrix();
 }
+
+
 
 void MyDrawCylinder(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
 
@@ -432,8 +478,11 @@ int main(int argc, char* argv[])
 		BeginMode3D(camera);
 		{
 	
-		MyDrawSphere(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
-		MyDrawSphereWires(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+		//MyDrawSphere(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
+		//MyDrawSphereWires(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+			MyDrawQuad({0}, Vector3{ 0 }, Vector2{ 10,10 }, RED);
+			MyDrawQuadWire({0}, Vector3{ 0 }, Vector2{ 10,10 }, BLACK);
+
 
 
 			//3D REFERENTIAL
