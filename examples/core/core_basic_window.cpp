@@ -1,23 +1,23 @@
-﻿	/*******************************************************************************************
-	*
-	*   raylib [core] example - Basic window
-	*
-	*   Welcome to raylib!
-	*
-	*   To test examples, just press F6 and execute raylib_compile_execute script
-	*   Note that compiled executable is placed in the same folder as .c file
-	*
-	*   You can find all basic examples on C:\raylib\raylib\examples folder or
-	*   raylib official webpage: www.raylib.com
-	*
-	*   Enjoy using raylib. :)
-	*
-	*   This example has been created using raylib 1.0 (www.raylib.com)
-	*   raylib is licensed under an unmodified zlib/libpng license (View raylib.h for details)
-	*
-	*   Copyright (c) 2014 Ramon Santamaria (@raysan5)
-	*
-	********************************************************************************************/
+﻿/*******************************************************************************************
+*
+*   raylib [core] example - Basic window
+*
+*   Welcome to raylib!
+*
+*   To test examples, just press F6 and execute raylib_compile_execute script
+*   Note that compiled executable is placed in the same folder as .c file
+*
+*   You can find all basic examples on C:\raylib\raylib\examples folder or
+*   raylib official webpage: www.raylib.com
+*
+*   Enjoy using raylib. :)
+*
+*   This example has been created using raylib 1.0 (www.raylib.com)
+*   raylib is licensed under an unmodified zlib/libpng license (View raylib.h for details)
+*
+*   Copyright (c) 2014 Ramon Santamaria (@raysan5)
+*
+********************************************************************************************/
 
 #include "raylib.h"
 #include <raymath.h>
@@ -62,12 +62,14 @@ struct Spherical {
 
 struct Segment
 {
-
+	Vector3 p1, p2;
 };
 
 struct Sphere
 {
-
+	Quaternion rotation;
+	Vector3 center;
+	float radius;
 };
 
 struct Plane
@@ -129,12 +131,12 @@ Vector3 SphericalToCartesian(Spherical sph)
 #pragma endregion
 
 #pragma region Drawers
-void MyDrawSphere(Quaternion q, Vector3 centerPos, float radius, int nSegmentsTheta, int nSegmentsPhi, Color color)
+void MyDrawSphere(Sphere sphere, int nSegmentsTheta, int nSegmentsPhi, Color color)
 {
 	if (nSegmentsTheta < 3 || nSegmentsPhi < 2) return;
 
 	std::vector<Vector3> vertexBufferTheta(nSegmentsTheta + 1);
-	std::fill(vertexBufferTheta.begin(), vertexBufferTheta.end(), Vector3{ 0,radius,0 });
+	std::fill(vertexBufferTheta.begin(), vertexBufferTheta.end(), Vector3{ 0,1,0 });
 
 	int numVertex = nSegmentsTheta * nSegmentsPhi * 6;
 	if (rlCheckBufferLimit(numVertex)) rlglDraw();
@@ -142,16 +144,16 @@ void MyDrawSphere(Quaternion q, Vector3 centerPos, float radius, int nSegmentsTh
 	rlPushMatrix();
 
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(centerPos.x, centerPos.y, centerPos.z);
+	rlTranslatef(sphere.center.x, sphere.center.y, sphere.center.z);
 
 	//ROTATION
 	Vector3 vect;
 	float angle;
-	QuaternionToAxisAngle(q, &vect, &angle);
+	QuaternionToAxisAngle(sphere.rotation, &vect, &angle);
 	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
 	//
 
-	rlScalef(radius, radius, radius);
+	rlScalef(sphere.radius, sphere.radius, sphere.radius);
 
 
 	rlBegin(RL_TRIANGLES);
@@ -164,14 +166,14 @@ void MyDrawSphere(Quaternion q, Vector3 centerPos, float radius, int nSegmentsTh
 	for (int i = 0; i < nSegmentsPhi; i++)
 	{
 		float theta = 0;
-		Vector3 tmpBottomLeft = SphericalToCartesian(Spherical{ radius,theta,phi + deltaPhi });
+		Vector3 tmpBottomLeft = SphericalToCartesian(Spherical{ 1,theta,phi + deltaPhi });
 
 		for (int j = 0; j < nSegmentsTheta; j++)
 		{
 			Vector3 topLeft = vertexBufferTheta[j];
 			Vector3 bottomLeft = tmpBottomLeft;
 			Vector3 topRight = vertexBufferTheta[j + 1];
-			Vector3 bottomRight = SphericalToCartesian(Spherical{ radius,theta + deltaTheta,phi + deltaPhi });
+			Vector3 bottomRight = SphericalToCartesian(Spherical{ 1,theta + deltaTheta,phi + deltaPhi });
 
 
 			rlVertex3f(bottomLeft.x, bottomLeft.y, bottomLeft.z);
@@ -194,28 +196,28 @@ void MyDrawSphere(Quaternion q, Vector3 centerPos, float radius, int nSegmentsTh
 	rlPopMatrix();
 }
 
-void MyDrawSphereWires(Quaternion q, Vector3 centerPos, float radius, int nSegmentsTheta, int nSegmentsPhi, Color color)
+void MyDrawSphereWires(Sphere sphere, int nSegmentsTheta, int nSegmentsPhi, Color color)
 {
 	if (nSegmentsTheta < 3 || nSegmentsPhi < 2) return;
 
 	std::vector<Vector3> vertexBufferTheta(nSegmentsTheta + 1);
-	std::fill(vertexBufferTheta.begin(), vertexBufferTheta.end(), Vector3{ 0,radius,0 });
+	std::fill(vertexBufferTheta.begin(), vertexBufferTheta.end(), Vector3{ 0,1,0 });
 
 	int numVertex = nSegmentsTheta * nSegmentsPhi * 4;
 	if (rlCheckBufferLimit(numVertex)) rlglDraw();
 
 	rlPushMatrix();
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(centerPos.x, centerPos.y, centerPos.z);
+	rlTranslatef(sphere.center.x, sphere.center.y, sphere.center.z);
 
 	//ROTATION
 	Vector3 vect;
 	float angle;
-	QuaternionToAxisAngle(q, &vect, &angle);
+	QuaternionToAxisAngle(sphere.rotation, &vect, &angle);
 	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
 	//
 
-	rlScalef(radius, radius, radius);
+	rlScalef(sphere.radius, sphere.radius, sphere.radius);
 
 	rlBegin(RL_LINES);
 	rlColor4ub(color.r, color.g, color.b, color.a);
@@ -231,7 +233,7 @@ void MyDrawSphereWires(Quaternion q, Vector3 centerPos, float radius, int nSegme
 		for (int j = 0; j < nSegmentsTheta; j++)
 		{
 			Vector3 topLeft = vertexBufferTheta[j];
-			Vector3 bottomLeft = SphericalToCartesian(Spherical{ radius,theta,phi + deltaPhi });
+			Vector3 bottomLeft = SphericalToCartesian(Spherical{ 1,theta,phi + deltaPhi });
 			Vector3 topRight = vertexBufferTheta[j + 1];
 
 			rlVertex3f(topLeft.x, topLeft.y, topLeft.z);
@@ -275,19 +277,19 @@ void MyDrawQuad(Quaternion q, Vector3 center, Vector2 size, Color color) {
 
 	rlBegin(RL_TRIANGLES);
 	rlColor4ub(color.r, color.g, color.b, color.a);
-        rlBegin(RL_TRIANGLES);
-            rlColor4ub(color.r, color.g, color.b, color.a);
+	rlBegin(RL_TRIANGLES);
+	rlColor4ub(color.r, color.g, color.b, color.a);
 
-            // Front face
-			float width = size.x;
-			float height = size.y;
-			float length = height;
-            rlVertex3f(center.x - width/2, center.y - height/2, center.z + length/2);  // Bottom Left
-            rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
-            rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y + height/2, center.z + length/2);  // Top Right
-            rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
+	// Front face
+	float width = size.x;
+	float height = size.y;
+	float length = height;
+	rlVertex3f(center.x - width / 2, center.y - height / 2, center.z + length / 2);  // Bottom Left
+	rlVertex3f(center.x + width / 2, center.y - height / 2, center.z + length / 2);  // Bottom Right
+	rlVertex3f(center.x - width / 2, center.y + height / 2, center.z + length / 2);  // Top Left
+	rlVertex3f(center.x + width / 2, center.y + height / 2, center.z + length / 2);  // Top Right
+	rlVertex3f(center.x - width / 2, center.y + height / 2, center.z + length / 2);  // Top Left
+	rlVertex3f(center.x + width / 2, center.y - height / 2, center.z + length / 2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
@@ -327,8 +329,32 @@ void MyDrawCylinderWiresPortion(Quaternion q, Cylinder cyl, float startTheta, fl
 #pragma endregion
 
 #pragma region Intersections
-bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interNormal) {
-	return false;
+bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt) {
+
+	double a, b, c, mu1, mu2;
+	double bb4ac;
+	Vector3 dp = Vector3Subtract(seg.p2, seg.p1);
+
+	a = dp.x * dp.x + dp.y * dp.y + dp.z * dp.z;
+	b = 2 * (dp.x * (seg.p1.x - s.center.x) + dp.y * (seg.p1.y - s.center.y) + dp.z * (seg.p1.z - s.center.z));
+	c = s.center.x * s.center.x + s.center.y * s.center.y + s.center.z * s.center.z;
+	c += seg.p1.x * seg.p1.x + seg.p1.y * seg.p1.y + seg.p1.z * seg.p1.z;
+	c -= 2 * (s.center.x * seg.p1.x + s.center.y * seg.p1.y + s.center.z * seg.p1.z);
+	c -= s.radius * s.radius;
+	bb4ac = b * b - 4 * a * c;
+
+	if (abs(a) < EPSILON || bb4ac < 0) {
+		mu1 = 0;
+		mu2 = 0;
+		return false;
+	}
+
+	mu1 = (-b + sqrt(bb4ac)) / (2 * a);
+	mu2 = (-b - sqrt(bb4ac)) / (2 * a);
+
+	interPt = Vector3Add(seg.p1, Vector3Scale(dp, mu1));
+
+	return true;
 }
 
 bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
@@ -423,6 +449,16 @@ int main(int argc, char* argv[])
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
 
+
+		Segment seg = Segment{ };
+		seg.p1 = { 5, 2, 0 };
+		seg.p2 = { -5, -2, 0 };
+
+		Sphere sphere = Sphere{ };
+		sphere.rotation = qOrient;
+		sphere.center = Vector3{ 0 };
+		sphere.radius = 2;
+
 		// Draw
 		//----------------------------------------------------------------------------------
 		BeginDrawing();
@@ -431,9 +467,18 @@ int main(int argc, char* argv[])
 
 		BeginMode3D(camera);
 		{
-	
-		MyDrawSphere(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
-		MyDrawSphereWires(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+			//
+			MyDrawSphere(sphere, 40, 20, BLUE);
+			MyDrawSphereWires(sphere, 40, 20, WHITE);
+
+			DrawLine3D(seg.p1, seg.p2, RED);
+			DrawSphere(seg.p1, .1f, RED);
+			DrawSphere(seg.p2, .1f, RED);
+
+			Vector3 intersection = { 0,0,0 };
+			InterSegmentSphere(seg, sphere, intersection);
+
+			DrawSphere(intersection, .25f, GREEN);
 
 
 			//3D REFERENTIAL
