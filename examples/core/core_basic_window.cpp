@@ -74,7 +74,8 @@ struct Sphere
 
 struct Plane
 {
-
+	Vector3 center;
+	Vector2 size;
 };
 
 struct Cylinder
@@ -329,7 +330,7 @@ void MyDrawCylinderWiresPortion(Quaternion q, Cylinder cyl, float startTheta, fl
 #pragma endregion
 
 #pragma region Intersections
-bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt) {
+bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interNormal) {
 
 	double a, b, c, mu1, mu2;
 	double bb4ac;
@@ -353,6 +354,7 @@ bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt) {
 	mu2 = (-b - sqrt(bb4ac)) / (2 * a);
 
 	interPt = Vector3Add(seg.p1, Vector3Scale(dp, mu1));
+	interNormal = Vector3Normalize(Vector3Subtract(interPt, s.center));
 
 	return true;
 }
@@ -451,7 +453,7 @@ int main(int argc, char* argv[])
 
 
 		Segment seg = Segment{ };
-		seg.p1 = { 5, 2, 0 };
+		seg.p1 = { 5, 5, 0 };
 		seg.p2 = { -5, -2, 0 };
 
 		Sphere sphere = Sphere{ };
@@ -476,7 +478,9 @@ int main(int argc, char* argv[])
 			DrawSphere(seg.p2, .1f, RED);
 
 			Vector3 intersection = { 0,0,0 };
-			InterSegmentSphere(seg, sphere, intersection);
+			Vector3 normal = { 0,0,0 };
+			InterSegmentSphere(seg, sphere, intersection, normal);
+			DrawLine3D(intersection, Vector3Add(intersection, normal), RED);
 
 			DrawSphere(intersection, .25f, GREEN);
 
