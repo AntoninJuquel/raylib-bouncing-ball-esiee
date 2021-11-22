@@ -323,22 +323,22 @@ void MyDrawQuadWire(Quaternion q, Vector3 center, Vector2 size, Color color) {
             rlColor4ub(color.r, color.g, color.b, color.a);
 
             // facing up by default
+
+            rlVertex3f(x-width/2, y, z-length/2);  // Bottom Left
+            rlVertex3f(x+width/2, y, z-length/2);  // Bottom Right
+
             // Left Line
-            rlVertex3f(x-width/2, y, z+length/2);  // Top Left Front
-            rlVertex3f(x-width/2, y, z-length/2);  // Top Left Back
+            rlVertex3f(x+width/2, y, z-length/2);  // Bottom Right
+            rlVertex3f(x+width/2, y, z-length/2);  // Top Right
+
+            // Top Line
+            rlVertex3f(x+width/2, y, z-length/2);  // Top Right
+            rlVertex3f(x-width/2, y, z-length/2);  // Top Left
 
             // Right Line
-            rlVertex3f(x+width/2, y, z+length/2);  // Top Right Front
-            rlVertex3f(x+width/2, y, z-length/2);  // Top Right Back
+            rlVertex3f(x-width/2, y, z-length/2);  // Top Left
+            rlVertex3f(x-width/2, y, z-length/2);  // Bottom Left
 
-            // Bottom Face  ---------------------------------------------------
-            // Left Line
-            rlVertex3f(x-width/2, y, z+length/2);  // Top Left Front
-            rlVertex3f(x-width/2, y, z-length/2);  // Top Left Back
-
-            // Right Line
-            rlVertex3f(x+width/2, y, z+length/2);  // Top Right Front
-            rlVertex3f(x+width/2, y, z-length/2);  // Top Right Back
         rlEnd();
     rlPopMatrix();
 }
@@ -346,7 +346,58 @@ void MyDrawQuadWire(Quaternion q, Vector3 center, Vector2 size, Color color) {
 
 
 void MyDrawCylinder(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
-
+	//void DrawCylinder(Vector3 position, float radiusTop, float radiusBottom, float height, int sides, Color color)
+	int sides = 100;
+		if (sides < 3) sides = 3;
+		int numVertex = sides * 6;
+		if (rlCheckBufferLimit(numVertex)) rlglDraw();
+		rlPushMatrix();
+		Vector3 position = cyl.pt1;
+		rlTranslatef(position.x, position.y, position.z);
+		rlBegin(RL_TRIANGLES);
+		rlColor4ub(color.r, color.g, color.b, color.a);
+		float radiusTop = cyl.radius;
+		float radiusBottom = cyl.radius;
+		float height = cyl.pt1.y - cyl.pt2.y;
+		if (radiusTop > 0)
+		{
+			// Draw Body -------------------------------------------------------------------------------------
+			for (int i = 0; i < 360; i += 360 / sides)
+			{
+				rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom); //Bottom Left
+				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusBottom, 0, cosf(DEG2RAD * (i + 360 / sides)) * radiusBottom); //Bottom Right
+				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusTop, height, cosf(DEG2RAD * (i + 360 / sides)) * radiusTop); //Top Right
+				rlVertex3f(sinf(DEG2RAD * i) * radiusTop, height, cosf(DEG2RAD * i) * radiusTop); //Top Left
+				rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom); //Bottom Left
+				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusTop, height, cosf(DEG2RAD * (i + 360 / sides)) * radiusTop); //Top Right
+			}
+			// Draw Cap --------------------------------------------------------------------------------------
+			for (int i = 0; i < 360; i += 360 / sides)
+			{
+				rlVertex3f(0, height, 0);
+				rlVertex3f(sinf(DEG2RAD * i) * radiusTop, height, cosf(DEG2RAD * i) * radiusTop);
+				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusTop, height, cosf(DEG2RAD * (i + 360 / sides)) * radiusTop);
+			}
+		}
+		else
+		{
+			// Draw Cone -------------------------------------------------------------------------------------
+			for (int i = 0; i < 360; i += 360 / sides)
+			{
+				rlVertex3f(0, height, 0);
+				rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom);
+				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusBottom, 0, cosf(DEG2RAD * (i + 360 / sides)) * radiusBottom);
+			}
+		}
+		// Draw Base -----------------------------------------------------------------------------------------
+		for (int i = 0; i < 360; i += 360 / sides)
+		{
+			rlVertex3f(0, 0, 0);
+			rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusBottom, 0, cosf(DEG2RAD * (i + 360 / sides)) * radiusBottom);
+			rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom);
+		}
+		rlEnd();
+		rlPopMatrix();
 }
 void MyDrawCylinderWires(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
 
@@ -518,6 +569,15 @@ int main(int argc, char* argv[])
 			//
 			MyDrawSphere(sphere, 40, 20, BLUE);
 			MyDrawSphereWires(sphere, 40, 20, WHITE);
+
+			// cyl ? 
+
+			Cylinder cyl;
+			cyl.pt1 = { 0,0,0 };
+			cyl.pt2 = { 0, -10,0 };
+			cyl.radius = 1;
+
+			MyDrawCylinder({ 0 }, cyl, 10, true, BLUE);
 
 			DrawLine3D(seg.p1, seg.p2, RED);
 			DrawSphere(seg.p1, .1f, RED);
