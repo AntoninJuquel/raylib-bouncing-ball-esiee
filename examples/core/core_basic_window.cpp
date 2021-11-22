@@ -457,6 +457,14 @@ bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interN
 }
 
 bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
+
+	Vector3 diff = Vector3Subtract(seg.p1, plane.center);
+	Vector3 lineVector = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
+	Vector3 planeNormal = { 0,1,0 };
+	Vector3 planePoint = plane.center;
+
+	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
+
 	return false;
 }
 
@@ -558,6 +566,15 @@ int main(int argc, char* argv[])
 		sphere.center = Vector3{ 0 };
 		sphere.radius = 2;
 
+		Cylinder cyl;
+		cyl.pt1 = { 0,0,0 };
+		cyl.pt2 = { 0, -10,0 };
+		cyl.radius = 1;
+
+		Plane plane;
+		plane.center = { 0 };
+		plane.size = { 5, 5 };
+
 		// Draw
 		//----------------------------------------------------------------------------------
 		BeginDrawing();
@@ -567,17 +584,15 @@ int main(int argc, char* argv[])
 		BeginMode3D(camera);
 		{
 			//
-			MyDrawSphere(sphere, 40, 20, BLUE);
-			MyDrawSphereWires(sphere, 40, 20, WHITE);
+			//MyDrawSphere(sphere, 40, 20, BLUE);
+			//MyDrawSphereWires(sphere, 40, 20, WHITE);
 
 			// cyl ? 
 
-			Cylinder cyl;
-			cyl.pt1 = { 0,0,0 };
-			cyl.pt2 = { 0, -10,0 };
-			cyl.radius = 1;
+			//MyDrawQuad({ 0 }, plane.center, plane.size, RED);
+			MyDrawQuadWire({ 0 }, plane.center, plane.size, RED);
 
-			MyDrawCylinder({ 0 }, cyl, 10, true, BLUE);
+			//MyDrawCylinder({ 0 }, cyl, 10, true, BLUE);
 
 			DrawLine3D(seg.p1, seg.p2, RED);
 			DrawSphere(seg.p1, .1f, RED);
@@ -585,9 +600,10 @@ int main(int argc, char* argv[])
 
 			Vector3 intersection = { 0,0,0 };
 			Vector3 normal = { 0,0,0 };
-			InterSegmentSphere(seg, sphere, intersection, normal);
-			DrawLine3D(intersection, Vector3Add(intersection, normal), RED);
+			//InterSegmentSphere(seg, sphere, intersection, normal);
+			InterSegmentPlane(seg, plane, intersection, normal);
 
+			DrawLine3D(intersection, Vector3Add(intersection, normal), RED);
 			DrawSphere(intersection, .25f, GREEN);
 
 
