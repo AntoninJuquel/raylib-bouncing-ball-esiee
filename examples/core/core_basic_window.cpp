@@ -357,8 +357,18 @@ int main(int argc, char* argv[])
 		BeginMode3D(camera);
 		{
 			//
-		MyDrawSphereEx2(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
-		MyDrawSphereWiresEx2(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+		//MyDrawSphereEx2(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
+		//MyDrawSphereWiresEx2(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+			Rectangle rec;
+			Vector2 vec;
+			vec.x = 1;
+			vec.y = 0;
+			rec.height = 5;
+			rec.width = 10;
+			rec.x = 0;
+			rec.y = 0;
+
+			DrawRectanglePro(rec, vec, 1.5f, RED);
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
