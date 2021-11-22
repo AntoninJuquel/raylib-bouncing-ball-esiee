@@ -259,12 +259,19 @@ void MyDrawSphereWiresPortion(Quaternion q, Sphere sph, float startTheta, float 
 
 }
 
-void MyDrawQuad(Vector3 center, Vector2 size, Color color) {
+
+void MyDrawQuad(Quaternion q, Vector3 center, Vector2 size, Color color) {
 
 	rlPushMatrix();
 
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
 	rlTranslatef(center.x, center.y, center.z);
+
+	//ROTATION
+	Vector3 vect;
+	float angle;
+	QuaternionToAxisAngle(q, &vect, &angle);
+	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
 
 	rlBegin(RL_TRIANGLES);
 	rlColor4ub(color.r, color.g, color.b, color.a);
@@ -281,14 +288,6 @@ void MyDrawQuad(Vector3 center, Vector2 size, Color color) {
             rlVertex3f(center.x + width/2, center.y + height/2, center.z + length/2);  // Top Right
             rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
             rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
-
-			//backside ?
-            rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
-            rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y + height/2, center.z + length/2);  // Top Right
-            rlVertex3f(center.x - width/2, center.y + height/2, center.z + length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y - height/2, center.z + length/2);  // Bottom Right
-            rlVertex3f(center.x - width/2, center.y - height/2, center.z + length/2);  // Bottom Left
 
 	rlEnd();
 	rlPopMatrix();
@@ -420,6 +419,7 @@ int main(int argc, char* argv[])
 		float deltaTime = GetFrameTime();
 		float time = (float)GetTime();
 		Quaternion qOrient = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
+		Quaternion qOrient2 = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
 
@@ -431,9 +431,10 @@ int main(int argc, char* argv[])
 
 		BeginMode3D(camera);
 		{
-			//
+	
 		MyDrawSphere(qOrient, Vector3{ 0 }, 2, 40, 20, BLUE);
 		MyDrawSphereWires(qOrient, Vector3{ 0 }, 2, 40, 20, WHITE);
+
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
