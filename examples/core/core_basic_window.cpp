@@ -74,6 +74,7 @@ struct Sphere
 
 struct Plane
 {
+	Quaternion rotation;
 	Vector3 center;
 	Vector2 size;
 };
@@ -254,26 +255,26 @@ void MyDrawSphereWires(Sphere sphere, int nSegmentsTheta, int nSegmentsPhi, Colo
 	rlPopMatrix();
 }
 
-void MyDrawSpherePortion(Quaternion q, Sphere sph, float startTheta, float endTheta, float startPhi, float endPhi, int nSegmentsTheta, int nSegmentsPhi, Color color) {
+void MyDrawSpherePortion(Sphere sph, float startTheta, float endTheta, float startPhi, float endPhi, int nSegmentsTheta, int nSegmentsPhi, Color color) {
 
 }
 
-void MyDrawSphereWiresPortion(Quaternion q, Sphere sph, float startTheta, float endTheta, float startPhi, float endPhi, int nSegmentsTheta, int nSegmentsPhi, Color color) {
+void MyDrawSphereWiresPortion(Sphere sph, float startTheta, float endTheta, float startPhi, float endPhi, int nSegmentsTheta, int nSegmentsPhi, Color color) {
 
 }
 
 
-void MyDrawQuad(Quaternion q, Vector3 center, Vector2 size, Color color) {
+void MyDrawQuad(Plane plane, Color color) {
 
 	rlPushMatrix();
 
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(center.x, center.y, center.z);
+	rlTranslatef(plane.center.x, plane.center.y, plane.center.z);
 
 	//ROTATION
 	Vector3 vect;
 	float angle;
-	QuaternionToAxisAngle(q, &vect, &angle);
+	QuaternionToAxisAngle(plane.rotation, &vect, &angle);
 	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
 
 	rlBegin(RL_TRIANGLES);
@@ -282,41 +283,41 @@ void MyDrawQuad(Quaternion q, Vector3 center, Vector2 size, Color color) {
             rlColor4ub(color.r, color.g, color.b, color.a);
 
             // Front face
-			float width = size.x;
-			float height = size.y;
+			float width = plane.size.x;
+			float height = plane.size.y;
 			float length = height;
 
             // by default facing up 
 
-            rlVertex3f(center.x - width/2, center.y, center.z - length/2);  // Top Left
-            rlVertex3f(center.x - width/2, center.y, center.z + length/2);  // Bottom Left
-			rlVertex3f(center.x + width / 2, center.y, center.z + length / 2);  // Bottom Right
+            rlVertex3f(plane.center.x - width/2, plane.center.y, plane.center.z - length/2);  // Top Left
+            rlVertex3f(plane.center.x - width/2, plane.center.y, plane.center.z + length/2);  // Bottom Left
+			rlVertex3f(plane.center.x + width / 2, plane.center.y, plane.center.z + length / 2);  // Bottom Right
 
-            rlVertex3f(center.x + width/2, center.y, center.z - length/2);  // Top Right
-            rlVertex3f(center.x - width/2, center.y, center.z - length/2);  // Top Left
-            rlVertex3f(center.x + width/2, center.y, center.z + length/2);  // Bottom Right
+            rlVertex3f(plane.center.x + width/2, plane.center.y, plane.center.z - length/2);  // Top Right
+            rlVertex3f(plane.center.x - width/2, plane.center.y, plane.center.z - length/2);  // Top Left
+            rlVertex3f(plane.center.x + width/2, plane.center.y, plane.center.z + length/2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
 }
-void MyDrawQuadWire(Quaternion q, Vector3 center, Vector2 size, Color color) {
+void MyDrawQuadWire(Plane plane, Color color) {
 
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
-	float width = size.x;
-	float height = size.y;
+	float width = plane.size.x;
+	float height = plane.size.y;
 	float length = height;
 
     if (rlCheckBufferLimit(36)) rlglDraw();
 
     rlPushMatrix();
 
-		rlTranslatef(center.x, center.y, center.z);
+		rlTranslatef(plane.center.x, plane.center.y, plane.center.z);
 	//ROTATION
 	Vector3 vect;
 	float angle;
-	QuaternionToAxisAngle(q, &vect, &angle);
+	QuaternionToAxisAngle(plane.rotation, &vect, &angle);
 	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
 
         rlBegin(RL_LINES);
@@ -467,12 +468,12 @@ bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& inte
 
 	Vector3 diff = Vector3Subtract(seg.p1, plane.center);
 	Vector3 lineVector = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
-	Vector3 planeNormal = { 0,1,0 };
+	Vector3 planeNormal = Vector3RotateByQuaternion({ 0,1,0 }, plane.rotation);
 	Vector3 planePoint = plane.center;
 
 	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
 
-	return false;
+	return true;
 }
 
 bool InterSegmentInfiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
@@ -581,6 +582,7 @@ int main(int argc, char* argv[])
 		Plane plane;
 		plane.center = { 0 };
 		plane.size = { 5, 5 };
+		plane.rotation = qOrient;
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -596,8 +598,8 @@ int main(int argc, char* argv[])
 
 			// cyl ? 
 
-			//MyDrawQuad({ 0 }, plane.center, plane.size, RED);
-			MyDrawQuadWire({ 0 }, plane.center, plane.size, RED);
+			MyDrawQuad(plane, RED);
+			MyDrawQuadWire(plane, RED);
 
 			//MyDrawCylinder({ 0 }, cyl, 10, true, BLUE);
 
