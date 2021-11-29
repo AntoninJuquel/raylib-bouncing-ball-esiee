@@ -68,27 +68,29 @@ struct Segment
 struct Sphere
 {
 	Quaternion rotation;
-	Vector3 center;
+	Vector3 position;
 	float radius;
 };
 
 struct Plane
 {
 	Quaternion rotation;
-	Vector3 center;
-	Vector2 size;
+	Vector3 position;
+	Vector2 scale;
 };
 
 struct Cylinder
 {
-	Vector3 pt1;
-	Vector3 pt2;
-	float radius;
+	Quaternion rotation;
+	Vector3 position;
+	Vector2 scale;
 };
 
 struct Disk
 {
-
+	Quaternion rotation;
+	Vector3 position;
+	float radius;
 };
 
 struct Referential
@@ -99,7 +101,9 @@ struct Referential
 
 struct Capsule
 {
-
+	Vector3 pt1;
+	Vector3 pt2;
+	float radius;
 };
 #pragma endregion
 
@@ -146,7 +150,7 @@ void MyDrawSphere(Sphere sphere, int nSegmentsTheta, int nSegmentsPhi, Color col
 	rlPushMatrix();
 
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(sphere.center.x, sphere.center.y, sphere.center.z);
+	rlTranslatef(sphere.position.x, sphere.position.y, sphere.position.z);
 
 	//ROTATION
 	Vector3 vect;
@@ -210,7 +214,7 @@ void MyDrawSphereWires(Sphere sphere, int nSegmentsTheta, int nSegmentsPhi, Colo
 
 	rlPushMatrix();
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(sphere.center.x, sphere.center.y, sphere.center.z);
+	rlTranslatef(sphere.position.x, sphere.position.y, sphere.position.z);
 
 	//ROTATION
 	Vector3 vect;
@@ -269,7 +273,7 @@ void MyDrawQuad(Plane plane, Color color) {
 	rlPushMatrix();
 
 	// NOTE: Transformation is applied in inverse order (scale -> translate)
-	rlTranslatef(plane.center.x, plane.center.y, plane.center.z);
+	rlTranslatef(plane.position.x, plane.position.y, plane.position.z);
 
 	//ROTATION
 	Vector3 vect;
@@ -279,150 +283,190 @@ void MyDrawQuad(Plane plane, Color color) {
 
 	rlBegin(RL_TRIANGLES);
 	rlColor4ub(color.r, color.g, color.b, color.a);
-        rlBegin(RL_TRIANGLES);
-            rlColor4ub(color.r, color.g, color.b, color.a);
+	rlBegin(RL_TRIANGLES);
+	rlColor4ub(color.r, color.g, color.b, color.a);
 
-            // Front face
-			float width = plane.size.x;
-			float height = plane.size.y;
-			float length = height;
+	// Front face
+	float width = plane.scale.x;
+	float height = plane.scale.y;
+	float length = height;
 
-            // by default facing up 
+	// by default facing up 
 
-            rlVertex3f(plane.center.x - width/2, plane.center.y, plane.center.z - length/2);  // Top Left
-            rlVertex3f(plane.center.x - width/2, plane.center.y, plane.center.z + length/2);  // Bottom Left
-			rlVertex3f(plane.center.x + width / 2, plane.center.y, plane.center.z + length / 2);  // Bottom Right
+	rlVertex3f(plane.position.x - width / 2, plane.position.y, plane.position.z - length / 2);  // Top Left
+	rlVertex3f(plane.position.x - width / 2, plane.position.y, plane.position.z + length / 2);  // Bottom Left
+	rlVertex3f(plane.position.x + width / 2, plane.position.y, plane.position.z + length / 2);  // Bottom Right
 
-            rlVertex3f(plane.center.x + width/2, plane.center.y, plane.center.z - length/2);  // Top Right
-            rlVertex3f(plane.center.x - width/2, plane.center.y, plane.center.z - length/2);  // Top Left
-            rlVertex3f(plane.center.x + width/2, plane.center.y, plane.center.z + length/2);  // Bottom Right
+	rlVertex3f(plane.position.x + width / 2, plane.position.y, plane.position.z - length / 2);  // Top Right
+	rlVertex3f(plane.position.x - width / 2, plane.position.y, plane.position.z - length / 2);  // Top Left
+	rlVertex3f(plane.position.x + width / 2, plane.position.y, plane.position.z + length / 2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
 }
 void MyDrawQuadWire(Plane plane, Color color) {
 
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-	float width = plane.size.x;
-	float height = plane.size.y;
+	float x = 0.0f;
+	float y = 0.0f;
+	float z = 0.0f;
+	float width = plane.scale.x;
+	float height = plane.scale.y;
 	float length = height;
 
-    if (rlCheckBufferLimit(36)) rlglDraw();
+	if (rlCheckBufferLimit(36)) rlglDraw();
 
-    rlPushMatrix();
+	rlPushMatrix();
 
-		rlTranslatef(plane.center.x, plane.center.y, plane.center.z);
+	rlTranslatef(plane.position.x, plane.position.y, plane.position.z);
 	//ROTATION
 	Vector3 vect;
 	float angle;
 	QuaternionToAxisAngle(plane.rotation, &vect, &angle);
 	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
 
-        rlBegin(RL_LINES);
-            rlColor4ub(color.r, color.g, color.b, color.a);
+	rlBegin(RL_LINES);
+	rlColor4ub(color.r, color.g, color.b, color.a);
 
-            // facing up by default
+	// facing up by default
 
-            rlVertex3f(x-width/2, y, z-length/2);  // Bottom Left
-            rlVertex3f(x+width/2, y, z-length/2);  // Bottom Right
+	rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
+	rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
 
-            // Left Line
-            rlVertex3f(x+width/2, y, z-length/2);  // Bottom Right
-            rlVertex3f(x+width/2, y, z+length/2);  // Top Right
+	// Left Line
+	rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
+	rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
 
-            // Top Line
-            rlVertex3f(x+width/2, y, z+length/2);  // Top Right
-            rlVertex3f(x-width/2, y, z+length/2);  // Top Left
+	// Top Line
+	rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
+	rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
 
-            // Right Line
-            rlVertex3f(x-width/2, y, z+length/2);  // Top Left
-            rlVertex3f(x-width/2, y, z-length/2);  // Bottom Left
+	// Right Line
+	rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
+	rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
 
-			//Diagonal
-			rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
-			rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
+	//Diagonal
+	rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
+	rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
 
-			rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
-			rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
+	rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
+	rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
 
-        rlEnd();
-    rlPopMatrix();
+	rlEnd();
+	rlPopMatrix();
 }
 
-
-
-void MyDrawCylinder(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
-	//void DrawCylinder(Vector3 position, float radiusTop, float radiusBottom, float height, int sides, Color color)
+void MyDrawDisk(Disk disk, int nSegmentsTheta, Color color) {
 	int sides = 100;
-		if (sides < 3) sides = 3;
-		int numVertex = sides * 6;
-		if (rlCheckBufferLimit(numVertex)) rlglDraw();
-		rlPushMatrix();
-		Vector3 position = cyl.pt1;
-		rlTranslatef(position.x, position.y, position.z);
-		rlBegin(RL_TRIANGLES);
-		rlColor4ub(color.r, color.g, color.b, color.a);
-		float radiusTop = cyl.radius;
-		float radiusBottom = cyl.radius;
-		float height = cyl.pt1.y - cyl.pt2.y;
-		if (radiusTop > 0)
-		{
-			// Draw Body -------------------------------------------------------------------------------------
-			for (int i = 0; i < 360; i += 360 / sides)
-			{
-				rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom); //Bottom Left
-				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusBottom, 0, cosf(DEG2RAD * (i + 360 / sides)) * radiusBottom); //Bottom Right
-				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusTop, height, cosf(DEG2RAD * (i + 360 / sides)) * radiusTop); //Top Right
-				rlVertex3f(sinf(DEG2RAD * i) * radiusTop, height, cosf(DEG2RAD * i) * radiusTop); //Top Left
-				rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom); //Bottom Left
-				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusTop, height, cosf(DEG2RAD * (i + 360 / sides)) * radiusTop); //Top Right
-			}
-			// Draw Cap --------------------------------------------------------------------------------------
-			for (int i = 0; i < 360; i += 360 / sides)
-			{
-				rlVertex3f(0, height, 0);
-				rlVertex3f(sinf(DEG2RAD * i) * radiusTop, height, cosf(DEG2RAD * i) * radiusTop);
-				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusTop, height, cosf(DEG2RAD * (i + 360 / sides)) * radiusTop);
-			}
-		}
-		else
-		{
-			// Draw Cone -------------------------------------------------------------------------------------
-			for (int i = 0; i < 360; i += 360 / sides)
-			{
-				rlVertex3f(0, height, 0);
-				rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom);
-				rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusBottom, 0, cosf(DEG2RAD * (i + 360 / sides)) * radiusBottom);
-			}
-		}
-		// Draw Base -----------------------------------------------------------------------------------------
-		for (int i = 0; i < 360; i += 360 / sides)
-		{
-			rlVertex3f(0, 0, 0);
-			rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radiusBottom, 0, cosf(DEG2RAD * (i + 360 / sides)) * radiusBottom);
-			rlVertex3f(sinf(DEG2RAD * i) * radiusBottom, 0, cosf(DEG2RAD * i) * radiusBottom);
-		}
-		rlEnd();
-		rlPopMatrix();
+	int numVertex = sides * 6;
+	if (rlCheckBufferLimit(numVertex)) rlglDraw();
+	rlPushMatrix();
+	Vector3 position = disk.position;
+	rlTranslatef(position.x, position.y, position.z);
+
+	//ROTATION
+	Vector3 vect;
+	float angle;
+	QuaternionToAxisAngle(disk.rotation, &vect, &angle);
+	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
+
+	rlBegin(RL_TRIANGLES);
+	rlColor4ub(color.r, color.g, color.b, color.a);
+
+	for (int i = 0; i < 360; i += 360 / sides)
+	{
+		rlVertex3f(0, 0, 0);
+		rlVertex3f(sinf(DEG2RAD * i) * disk.radius, 0, cosf(DEG2RAD * i) * disk.radius);
+		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * disk.radius, 0, cosf(DEG2RAD * (i + 360 / sides)) * disk.radius);
+	}
+
+	rlEnd();
+	rlPopMatrix();
+}
+
+void MyDrawCylinder(Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
+	int sides = 100;
+	int numVertex = sides * 6;
+	if (rlCheckBufferLimit(numVertex)) rlglDraw();
+	rlPushMatrix();
+	Vector3 position = cyl.position;
+	rlTranslatef(position.x, position.y, position.z);
+
+	//ROTATION
+	Vector3 vect;
+	float angle;
+	QuaternionToAxisAngle(cyl.rotation, &vect, &angle);
+	rlRotatef(angle * RAD2DEG, vect.x, vect.y, vect.z);
+
+	rlBegin(RL_TRIANGLES);
+	rlColor4ub(color.r, color.g, color.b, color.a);
+	float radius = cyl.scale.x;
+	float height = cyl.scale.y;
+
+	Vector3 top = { 0,height * .5f,0 };
+	Vector3 bottom = { 0,-height * .5f,0 };
+
+
+	// Draw Body -------------------------------------------------------------------------------------
+	for (int i = 0; i < 360; i += 360 / sides)
+	{
+
+		rlVertex3f(sinf(DEG2RAD * i) * radius, bottom.y, cosf(DEG2RAD * i) * radius); //Bottom Left
+		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radius, bottom.y, cosf(DEG2RAD * (i + 360 / sides)) * radius); //Bottom Right
+		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radius, top.y, cosf(DEG2RAD * (i + 360 / sides)) * radius); //Top Right
+		rlVertex3f(sinf(DEG2RAD * i) * radius, top.y, cosf(DEG2RAD * i) * radius); //Top Left
+		rlVertex3f(sinf(DEG2RAD * i) * radius, bottom.y, cosf(DEG2RAD * i) * radius); //Bottom Left
+		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radius, top.y, cosf(DEG2RAD * (i + 360 / sides)) * radius); //Top Right
+	}
+	Disk dT = Disk{};
+	dT.position = { 0,height * 0.5f,0 };
+	dT.radius = radius;
+	dT.rotation = cyl.rotation;
+	//
+	// TODO racalculer la rotation pour face la base
+	//MyDrawDisk(dT, nSegmentsTheta, color);
+
+	// Draw Cap --------------------------------------------------------------------------------------
+	for (int i = 0; i < 360; i += 360 / sides)
+	{
+		rlVertex3f(0, top.y, 0);
+		rlVertex3f(sinf(DEG2RAD * i) * radius, top.y, cosf(DEG2RAD * i) * radius);
+		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radius, top.y, cosf(DEG2RAD * (i + 360 / sides)) * radius);
+	}
+	// Draw Base -----------------------------------------------------------------------------------------
+	for (int i = 0; i < 360; i += 360 / sides)
+	{
+		rlVertex3f(0, bottom.y, 0);
+		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radius, bottom.y, cosf(DEG2RAD * (i + 360 / sides)) * radius);
+		rlVertex3f(sinf(DEG2RAD * i) * radius, bottom.y, cosf(DEG2RAD * i) * radius);
+	}
+
+	if (drawCaps) {
+		Sphere s1 = Sphere{ };
+		s1.position = top;
+		s1.radius = radius;
+		MyDrawSphere(s1, nSegmentsTheta, nSegmentsTheta, color);
+		Sphere s2 = Sphere{ };
+		s2.position = bottom;
+		s2.radius = radius;
+		MyDrawSphere(s2, nSegmentsTheta, nSegmentsTheta, color);
+	}
+
+	rlEnd();
+	rlPopMatrix();
 }
 void MyDrawCylinderWires(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
 
 }
 
-void MyDrawDisk(Quaternion q, Vector3 center, float radius, int nSegmentsTheta, Color color) {
-
-}
-void MyDrawDiskWires(Quaternion q, Vector3 center, float radius, int nSegmentsTheta, Color color) {
+void MyDrawDiskWires(Quaternion q, Vector3 position, float radius, int nSegmentsTheta, Color color) {
 
 }
 
-void MyDrawDiskPortion(Quaternion q, Vector3 center, float radius, float startTheta, float endTheta, int nSegmentsTheta, Color color) {
+void MyDrawDiskPortion(Quaternion q, Vector3 position, float radius, float startTheta, float endTheta, int nSegmentsTheta, Color color) {
 
 }
 
-void MyDrawDiskWiresPortion(Quaternion q, Vector3 center, float radius, float startTheta, float endTheta, int nSegmentsTheta, Color color) {
+void MyDrawDiskWiresPortion(Quaternion q, Vector3 position, float radius, float startTheta, float endTheta, int nSegmentsTheta, Color color) {
 
 }
 
@@ -442,10 +486,10 @@ bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interN
 	Vector3 dp = Vector3Subtract(seg.p2, seg.p1);
 
 	a = dp.x * dp.x + dp.y * dp.y + dp.z * dp.z;
-	b = 2 * (dp.x * (seg.p1.x - s.center.x) + dp.y * (seg.p1.y - s.center.y) + dp.z * (seg.p1.z - s.center.z));
-	c = s.center.x * s.center.x + s.center.y * s.center.y + s.center.z * s.center.z;
+	b = 2 * (dp.x * (seg.p1.x - s.position.x) + dp.y * (seg.p1.y - s.position.y) + dp.z * (seg.p1.z - s.position.z));
+	c = s.position.x * s.position.x + s.position.y * s.position.y + s.position.z * s.position.z;
 	c += seg.p1.x * seg.p1.x + seg.p1.y * seg.p1.y + seg.p1.z * seg.p1.z;
-	c -= 2 * (s.center.x * seg.p1.x + s.center.y * seg.p1.y + s.center.z * seg.p1.z);
+	c -= 2 * (s.position.x * seg.p1.x + s.position.y * seg.p1.y + s.position.z * seg.p1.z);
 	c -= s.radius * s.radius;
 	bb4ac = b * b - 4 * a * c;
 
@@ -459,17 +503,17 @@ bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interN
 	mu2 = (-b - sqrt(bb4ac)) / (2 * a);
 
 	interPt = Vector3Add(seg.p1, Vector3Scale(dp, mu1));
-	interNormal = Vector3Normalize(Vector3Subtract(interPt, s.center));
+	interNormal = Vector3Normalize(Vector3Subtract(interPt, s.position));
 
 	return true;
 }
 
 bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
 
-	Vector3 diff = Vector3Subtract(seg.p1, plane.center);
+	Vector3 diff = Vector3Subtract(seg.p1, plane.position);
 	Vector3 lineVector = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
 	Vector3 planeNormal = Vector3RotateByQuaternion({ 0,1,0 }, plane.rotation);
-	Vector3 planePoint = plane.center;
+	Vector3 planePoint = plane.position;
 
 	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
 
@@ -484,7 +528,18 @@ bool InterSegmentFiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vec
 	return false;
 }
 bool InterSegmentCapsule(Segment seg, Capsule capsule, Vector3& interPt, Vector3& interNormal) {
-	return false;
+
+	Sphere s1 = Sphere{};
+	s1.position = capsule.pt1;
+	s1.radius = capsule.radius;
+
+	Sphere s2 = Sphere{};
+	s2.position = capsule.pt2;
+	s2.radius = capsule.radius;
+
+	Cylinder cyl = Cylinder{};
+
+	return InterSegmentFiniteCylinder(seg, cyl, interPt, interNormal) || InterSegmentSphere(seg, s1, interPt, interNormal) || InterSegmentSphere(seg, s2, interPt, interNormal);
 }
 
 bool InterSegmentDisk(Segment seg, Disk disk, Vector3& interPt, Vector3& interNormal) {
@@ -571,17 +626,17 @@ int main(int argc, char* argv[])
 
 		Sphere sphere = Sphere{ };
 		sphere.rotation = qOrient;
-		sphere.center = Vector3{ 0 };
+		sphere.position = Vector3{ 0 };
 		sphere.radius = 2;
 
 		Cylinder cyl;
-		cyl.pt1 = { 0,0,0 };
-		cyl.pt2 = { 0, -10,0 };
-		cyl.radius = 1;
+		cyl.position = { 0 };
+		cyl.rotation = qOrient;
+		cyl.scale = { 1, 5 };
 
 		Plane plane;
-		plane.center = { 0 };
-		plane.size = { 5, 5 };
+		plane.position = { 0 };
+		plane.scale = { 5, 5 };
 		plane.rotation = qOrient;
 
 		// Draw
@@ -601,7 +656,7 @@ int main(int argc, char* argv[])
 			MyDrawQuad(plane, RED);
 			MyDrawQuadWire(plane, RED);
 
-			//MyDrawCylinder({ 0 }, cyl, 10, true, BLUE);
+			MyDrawCylinder(cyl, 10, true, BLUE);
 
 			DrawLine3D(seg.p1, seg.p2, RED);
 			DrawSphere(seg.p1, .1f, RED);
@@ -610,7 +665,7 @@ int main(int argc, char* argv[])
 			Vector3 intersection = { 0,0,0 };
 			Vector3 normal = { 0,0,0 };
 			//InterSegmentSphere(seg, sphere, intersection, normal);
-			InterSegmentPlane(seg, plane, intersection, normal);
+			//InterSegmentPlane(seg, plane, intersection, normal);
 
 			DrawLine3D(intersection, Vector3Add(intersection, normal), RED);
 			DrawSphere(intersection, .25f, GREEN);
