@@ -516,6 +516,7 @@ bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& inte
 	Vector3 planePoint = plane.position;
 
 	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
+	interNormal = planeNormal;
 
 	return true;
 }
@@ -637,7 +638,7 @@ int main(int argc, char* argv[])
 		Plane plane;
 		plane.position = { 0 };
 		plane.scale = { 5, 5 };
-		plane.rotation = qOrient;
+		plane.rotation = { 0, 0, 0 , 1 };
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -656,16 +657,16 @@ int main(int argc, char* argv[])
 			MyDrawQuad(plane, RED);
 			MyDrawQuadWire(plane, RED);
 
-			MyDrawCylinder(cyl, 10, true, BLUE);
+			//MyDrawCylinder(cyl, 10, true, BLUE);
 
 			DrawLine3D(seg.p1, seg.p2, RED);
-			DrawSphere(seg.p1, .1f, RED);
+			DrawSphere(seg.p1, .1f, BLUE);
 			DrawSphere(seg.p2, .1f, RED);
 
 			Vector3 intersection = { 0,0,0 };
 			Vector3 normal = { 0,0,0 };
 			//InterSegmentSphere(seg, sphere, intersection, normal);
-			//InterSegmentPlane(seg, plane, intersection, normal);
+			InterSegmentPlane(seg, plane, intersection, normal);
 
 			DrawLine3D(intersection, Vector3Add(intersection, normal), RED);
 			DrawSphere(intersection, .25f, GREEN);
