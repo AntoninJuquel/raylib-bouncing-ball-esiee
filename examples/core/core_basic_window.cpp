@@ -329,15 +329,22 @@ void MyDrawQuadWire(Quaternion q, Vector3 center, Vector2 size, Color color) {
 
             // Left Line
             rlVertex3f(x+width/2, y, z-length/2);  // Bottom Right
-            rlVertex3f(x+width/2, y, z-length/2);  // Top Right
+            rlVertex3f(x+width/2, y, z+length/2);  // Top Right
 
             // Top Line
-            rlVertex3f(x+width/2, y, z-length/2);  // Top Right
-            rlVertex3f(x-width/2, y, z-length/2);  // Top Left
+            rlVertex3f(x+width/2, y, z+length/2);  // Top Right
+            rlVertex3f(x-width/2, y, z+length/2);  // Top Left
 
             // Right Line
-            rlVertex3f(x-width/2, y, z-length/2);  // Top Left
+            rlVertex3f(x-width/2, y, z+length/2);  // Top Left
             rlVertex3f(x-width/2, y, z-length/2);  // Bottom Left
+
+			//Diagonal
+			rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
+			rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
+
+			rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
+			rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
 
         rlEnd();
     rlPopMatrix();
