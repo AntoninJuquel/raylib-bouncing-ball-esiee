@@ -101,9 +101,21 @@ struct Referential
 
 struct Capsule
 {
-	Vector3 pt1;
-	Vector3 pt2;
+	Vector3 position;
+	Quaternion rotation;
+	Vector2 scale;
+
+	Sphere sph1;
+	Sphere sph2;
+	Cylinder cyl;
+};
+
+struct Ball
+{
+	Vector3 position;
+	Vector3 velocity;
 	float radius;
+	float bounciness;
 };
 #pragma endregion
 
@@ -293,13 +305,13 @@ void MyDrawQuad(Plane plane, Color color) {
 
 	// by default facing up 
 
-	rlVertex3f(plane.position.x - width / 2, plane.position.y, plane.position.z - length / 2);  // Top Left
-	rlVertex3f(plane.position.x - width / 2, plane.position.y, plane.position.z + length / 2);  // Bottom Left
-	rlVertex3f(plane.position.x + width / 2, plane.position.y, plane.position.z + length / 2);  // Bottom Right
+	rlVertex3f(plane.position.x - width / 2, 0, plane.position.z - length / 2);  // Top Left
+	rlVertex3f(plane.position.x - width / 2, 0, plane.position.z + length / 2);  // Bottom Left
+	rlVertex3f(plane.position.x + width / 2, 0, plane.position.z + length / 2);  // Bottom Right
 
-	rlVertex3f(plane.position.x + width / 2, plane.position.y, plane.position.z - length / 2);  // Top Right
-	rlVertex3f(plane.position.x - width / 2, plane.position.y, plane.position.z - length / 2);  // Top Left
-	rlVertex3f(plane.position.x + width / 2, plane.position.y, plane.position.z + length / 2);  // Bottom Right
+	rlVertex3f(plane.position.x + width / 2, 0, plane.position.z - length / 2);  // Top Right
+	rlVertex3f(plane.position.x - width / 2, 0, plane.position.z - length / 2);  // Top Left
+	rlVertex3f(plane.position.x + width / 2, 0, plane.position.z + length / 2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
@@ -312,6 +324,7 @@ void MyDrawQuadWire(Plane plane, Color color) {
 	float width = plane.scale.x;
 	float height = plane.scale.y;
 	float length = height;
+
 
 	if (rlCheckBufferLimit(36)) rlglDraw();
 
@@ -383,7 +396,7 @@ void MyDrawDisk(Disk disk, int nSegmentsTheta, Color color) {
 	rlPopMatrix();
 }
 
-void MyDrawCylinder(Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
+void MyDrawCylinder(Cylinder cyl, int nSegmentsTheta, Color color) {
 	int sides = 100;
 	int numVertex = sides * 6;
 	if (rlCheckBufferLimit(numVertex)) rlglDraw();
@@ -439,23 +452,20 @@ void MyDrawCylinder(Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color
 		rlVertex3f(sinf(DEG2RAD * (i + 360 / sides)) * radius, bottom.y, cosf(DEG2RAD * (i + 360 / sides)) * radius);
 		rlVertex3f(sinf(DEG2RAD * i) * radius, bottom.y, cosf(DEG2RAD * i) * radius);
 	}
-
-	if (drawCaps) {
-		Sphere s1 = Sphere{ };
-		s1.position = top;
-		s1.radius = radius;
-		MyDrawSphere(s1, nSegmentsTheta, nSegmentsTheta, color);
-		Sphere s2 = Sphere{ };
-		s2.position = bottom;
-		s2.radius = radius;
-		MyDrawSphere(s2, nSegmentsTheta, nSegmentsTheta, color);
-	}
-
 	rlEnd();
 	rlPopMatrix();
 }
 void MyDrawCylinderWires(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
 
+}
+
+void MyDrawCapsule(Capsule capsule, float nSegmentsTheta, Color color) {
+	Cylinder cyl = capsule.cyl;
+	MyDrawCylinder(cyl, nSegmentsTheta, color);
+	Sphere s1 = capsule.sph1;
+	MyDrawSphere(s1, nSegmentsTheta, nSegmentsTheta, color);
+	Sphere s2 = capsule.sph2;
+	MyDrawSphere(s2, nSegmentsTheta, nSegmentsTheta, color);
 }
 
 void MyDrawDiskWires(Quaternion q, Vector3 position, float radius, int nSegmentsTheta, Color color) {
@@ -518,7 +528,7 @@ bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& inte
 	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
 	interNormal = planeNormal;
 
-	return true;
+	return Vector3Distance(interPt, plane.position) <= plane.scale.x && Vector3Distance(seg.p1, interPt) <= Vector3Distance(seg.p1, seg.p2);
 }
 
 bool InterSegmentInfiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
@@ -530,15 +540,9 @@ bool InterSegmentFiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vec
 }
 bool InterSegmentCapsule(Segment seg, Capsule capsule, Vector3& interPt, Vector3& interNormal) {
 
-	Sphere s1 = Sphere{};
-	s1.position = capsule.pt1;
-	s1.radius = capsule.radius;
-
-	Sphere s2 = Sphere{};
-	s2.position = capsule.pt2;
-	s2.radius = capsule.radius;
-
-	Cylinder cyl = Cylinder{};
+	Sphere s1 = capsule.sph1;
+	Sphere s2 = capsule.sph2;
+	Cylinder cyl = capsule.cyl;
 
 	return InterSegmentFiniteCylinder(seg, cyl, interPt, interNormal) || InterSegmentSphere(seg, s1, interPt, interNormal) || InterSegmentSphere(seg, s2, interPt, interNormal);
 }
@@ -574,6 +578,52 @@ void MyUpdateOrbitalCamera(Camera* camera, float deltaTime)
 
 	camera->position = SphericalToCartesian(sphPos);
 }
+
+void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes) {
+	ball->velocity.y += -9.81 * deltaTime;
+
+
+	Vector3 nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+
+	Segment collisionSeg = {};
+	collisionSeg.p1 = ball->position;
+	collisionSeg.p2 = nextPosition;
+
+	for each (Plane plane in planes)
+	{
+		Vector3 interPt;
+		Vector3 interNormal;
+		if (InterSegmentPlane(collisionSeg, plane, interPt, interNormal)) {
+			ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
+			nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+		}
+		collisionSeg.p1 = ball->position;
+		collisionSeg.p2 = nextPosition;
+	}
+
+	ball->position = nextPosition;
+}
+
+void CreateCapsule(Capsule* capsule) {
+	Cylinder cyl = {};
+	cyl.position = capsule->position;
+	cyl.scale = capsule->scale;
+	cyl.rotation = capsule->rotation;
+
+	Vector3 XAxis = Vector3RotateByQuaternion({ 0,1,0 }, capsule->rotation);
+
+	Sphere s1 = {};
+	s1.position = Vector3Add(capsule->position, Vector3Scale(XAxis,capsule->scale.y * 0.5f));
+	s1.radius = capsule->scale.x;
+
+	Sphere s2 = {};
+	s2.position = Vector3Add(capsule->position, Vector3Scale(XAxis, -capsule->scale.y * 0.5f));
+	s2.radius = capsule->scale.x;
+
+	capsule->cyl = cyl;
+	capsule->sph1 = s1;
+	capsule->sph2 = s2;
+}
 #pragma endregion
 
 int main(int argc, char* argv[])
@@ -598,13 +648,36 @@ int main(int argc, char* argv[])
 	camera.type = CAMERA_PERSPECTIVE;
 	SetCameraMode(camera, CAMERA_CUSTOM);  // Set an orbital camera mode
 
-	//TEST CONVERSION CARTESIAN->CYLINDRICAL
-	Vector3 pos = { 1,1,1 };
-	Cylindrical cyl = CartesianToCylindrical(pos);
-	printf("cyl = (%f,%f,%f) ", cyl.rho, cyl.theta, cyl.y);
-	cyl = cyl + cyl;
-	printf("cyl = (%f,%f,%f) ", cyl.rho, cyl.theta, cyl.y);
+	//BALL
+	Ball ball = {};
+	ball.position = { 0,10,0 };
+	ball.radius = .25f;
+	ball.velocity = { 0,0,0 };
+	ball.bounciness = 10;
 
+	//Planes
+	std::vector<Plane> planes;
+
+	Plane plane = {};
+	plane.position = { 0,0,0 };
+	plane.scale = { 20, 20 };
+	plane.rotation = QuaternionFromAxisAngle({ 1,0,0 }, -5 * DEG2RAD);
+
+	planes.push_back(plane);
+
+	Plane plane1 = {};
+	plane1.position = { 0,0,-10 };
+	plane1.scale = { 20, 20 };
+	plane1.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD);
+
+	planes.push_back(plane1);
+
+
+	Capsule capsule = {};
+	capsule.position = { 2,0,0 };
+	capsule.scale = { .5f, 1 };
+	capsule.rotation = QuaternionFromAxisAngle({ 1,0,1 }, 45 * DEG2RAD);
+	CreateCapsule(&capsule);
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
@@ -619,26 +692,12 @@ int main(int argc, char* argv[])
 		Quaternion qOrient2 = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
+		UpdateBall(&ball, deltaTime, planes);
 
-
-		Segment seg = Segment{ };
-		seg.p1 = { 5, 5, 0 };
-		seg.p2 = { -5, -2, 0 };
-
-		Sphere sphere = Sphere{ };
-		sphere.rotation = qOrient;
-		sphere.position = Vector3{ 0 };
-		sphere.radius = 2;
-
-		Cylinder cyl;
-		cyl.position = { 0 };
-		cyl.rotation = qOrient;
-		cyl.scale = { 1, 5 };
-
-		Plane plane;
-		plane.position = { 0 };
-		plane.scale = { 5, 5 };
-		plane.rotation = { 0, 0, 0 , 1 };
+		Sphere sphere = Sphere{};
+		sphere.position = ball.position;
+		sphere.rotation = { 0,0,0,1 };
+		sphere.radius = ball.radius;
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -648,29 +707,14 @@ int main(int argc, char* argv[])
 
 		BeginMode3D(camera);
 		{
-			//
-			//MyDrawSphere(sphere, 40, 20, BLUE);
-			//MyDrawSphereWires(sphere, 40, 20, WHITE);
+			for each (Plane plane in planes)
+			{
+				MyDrawQuad(plane, BLUE);
+			}
 
-			// cyl ? 
+			MyDrawSphere(sphere, 10, 10, GREEN);
 
-			MyDrawQuad(plane, RED);
-			MyDrawQuadWire(plane, RED);
-
-			//MyDrawCylinder(cyl, 10, true, BLUE);
-
-			DrawLine3D(seg.p1, seg.p2, RED);
-			DrawSphere(seg.p1, .1f, BLUE);
-			DrawSphere(seg.p2, .1f, RED);
-
-			Vector3 intersection = { 0,0,0 };
-			Vector3 normal = { 0,0,0 };
-			//InterSegmentSphere(seg, sphere, intersection, normal);
-			InterSegmentPlane(seg, plane, intersection, normal);
-
-			DrawLine3D(intersection, Vector3Add(intersection, normal), RED);
-			DrawSphere(intersection, .25f, GREEN);
-
+			MyDrawCapsule(capsule, 10,RED);
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
