@@ -313,13 +313,13 @@ void MyDrawQuad(Plane plane, Color color) {
 
 	// by default facing up 
 
-	rlVertex3f(+ width / 2, 0, - length / 2);  // Top Left
-	rlVertex3f(- width / 2, 0, - length / 2);  // Bottom Left
-	rlVertex3f(- width / 2, 0, + length / 2);  // Bottom Right
+	rlVertex3f(+width / 2, 0, -length / 2);  // Top Left
+	rlVertex3f(-width / 2, 0, -length / 2);  // Bottom Left
+	rlVertex3f(-width / 2, 0, +length / 2);  // Bottom Right
 
-	rlVertex3f(+ width / 2, 0, + length / 2);  // Top Right
-	rlVertex3f(+ width / 2, 0, - length / 2);  // Top Left
-	rlVertex3f(- width / 2, 0, + length / 2);  // Bottom Right
+	rlVertex3f(+width / 2, 0, +length / 2);  // Top Right
+	rlVertex3f(+width / 2, 0, -length / 2);  // Top Left
+	rlVertex3f(-width / 2, 0, +length / 2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
@@ -541,7 +541,42 @@ bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& inte
 	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
 	interNormal = planeNormal;
 
-	return Vector3Distance(interPt, plane.position) <= plane.scale.x && Vector3Distance(seg.p1, interPt) <= Vector3Distance(seg.p1, seg.p2);
+	return Vector3Distance(seg.p1, interPt) <= Vector3Distance(seg.p1, seg.p2);
+}
+
+bool InterSegmentQuad(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
+	if (InterSegmentPlane(seg, plane, interPt, interNormal)) {
+		//Determiner C A B les sommets du quad
+		//Vérifier que 0 < AinterPt . AC < AC . AC et que 0 < AinterPt . AB < AB . AB
+
+		Vector3 A = { plane.position.x - plane.scale.x * .5f, plane.position.y,  plane.position.z - plane.scale.y * .5f };
+		Vector3 B = { plane.position.x - plane.scale.x * .5f, plane.position.y,  plane.position.z + plane.scale.y * .5f };
+		Vector3 C = { plane.position.x + plane.scale.x * .5f, plane.position.y,  plane.position.z - plane.scale.y * .5f };
+
+		A = Vector3RotateByQuaternion(A, plane.rotation);
+		B = Vector3RotateByQuaternion(B, plane.rotation);
+		C = Vector3RotateByQuaternion(C, plane.rotation);
+
+		Vector3 AinterPt = Vector3Subtract(interPt, A);
+		Vector3 AC = Vector3Subtract(C, A);
+		Vector3 AB = Vector3Subtract(B, A);
+
+		float dot1 = Vector3DotProduct(AinterPt, AC);
+		float dot2 = Vector3DotProduct(AinterPt, AB);
+
+		return  0 < dot1 && dot1 < Vector3DotProduct(AC, AC) && 0 < dot2 && dot2 < Vector3DotProduct(AB, AB);
+	}
+
+	return false;
+}
+
+bool InterSegmentBox(Segment seg, Box box, Vector3& interPt, Vector3& interNormal) {
+	for each (Plane plane in box.quads) {
+		if (InterSegmentQuad(seg, plane, interPt, interNormal)) 
+			return true;
+	}
+
+	return false;
 }
 
 bool InterSegmentInfiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
@@ -592,7 +627,7 @@ void MyUpdateOrbitalCamera(Camera* camera, float deltaTime)
 	camera->position = SphericalToCartesian(sphPos);
 }
 
-void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes) {
+void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, Box box) {
 	ball->velocity.y += -9.81 * deltaTime;
 
 
@@ -606,7 +641,7 @@ void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes) {
 	{
 		Vector3 interPt;
 		Vector3 interNormal;
-		if (InterSegmentPlane(collisionSeg, plane, interPt, interNormal)) {
+		if (InterSegmentQuad(collisionSeg, plane, interPt, interNormal)) {
 			ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
 			nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
 		}
@@ -614,6 +649,17 @@ void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes) {
 		collisionSeg.p2 = nextPosition;
 	}
 
+	Vector3 interPt;
+	Vector3 interNormal;
+	
+	if (InterSegmentBox(collisionSeg, box, interPt, interNormal)) {
+		ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
+		nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+	}
+	collisionSeg.p1 = ball->position;
+	collisionSeg.p2 = nextPosition;
+
+	ball->velocity = Vector3Scale(Vector3Normalize(ball->velocity), 5);
 	ball->position = nextPosition;
 }
 
@@ -645,35 +691,35 @@ void CreateBox(Box* box) {
 	Vector3 YAxis = Vector3RotateByQuaternion({ 0,1,0 }, box->rotation);
 	Vector3 ZAxis = Vector3RotateByQuaternion({ 0,0,1 }, box->rotation);
 
-	planes[0].scale = { box->scale.x, box->scale.y };
 	planes[0].position = Vector3Scale(ZAxis, box->scale.z * .5f);
-	planes[0].rotation = QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD));
+	planes[0].scale = { box->scale.x, box->scale.y };
+	planes[0].rotation = QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD);
 
-	planes[1].scale = { box->scale.x, box->scale.y };
 	planes[1].position = Vector3Scale(ZAxis, -box->scale.z * .5f);
-	planes[1].rotation = QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD));
+	planes[1].scale = { box->scale.x, box->scale.y };
+	planes[1].rotation = QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD);
 
-	//planes[2].position = Vector3Add(box->position, Vector3Scale(YAxis, box->scale.y * 0.5f));
-	//planes[2].scale = { box->scale.x, box->scale.z };
-	//planes[2].rotation = box->rotation;
+	planes[2].position = Vector3Scale(YAxis, box->scale.y * 0.5f);
+	planes[2].scale = { box->scale.x, box->scale.z };
+	planes[2].rotation = QuaternionIdentity();
 
-	//planes[3].position = Vector3Add(box->position, Vector3Scale(YAxis, -box->scale.y * 0.5f));
-	//planes[3].scale = { box->scale.x, box->scale.z };
-	//planes[3].rotation = box->rotation;
+	planes[3].position = Vector3Scale(YAxis, -box->scale.y * 0.5f);
+	planes[3].scale = { box->scale.x, box->scale.z };
+	planes[3].rotation = QuaternionFromAxisAngle({ 1,0,0 }, 180 * DEG2RAD);
 
 	planes[4].position = Vector3Scale(XAxis, box->scale.x * .5f);
 	planes[4].scale = { box->scale.z, box->scale.y };
-	planes[4].rotation = box->rotation; //QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD));
+	planes[4].rotation = QuaternionMultiply(QuaternionFromAxisAngle({ 0,1,0 }, -90 * DEG2RAD), QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD)); //QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD));
 
-	/*planes[5].position = Vector3Scale(XAxis, -box->scale.x * .5f);
+	planes[5].position = Vector3Scale(XAxis, -box->scale.x * .5f);
 	planes[5].scale = { box->scale.z, box->scale.y };
-	planes[5].rotation = box->rotation; *///QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 0,0,1 }, -90 * DEG2RAD));
+	planes[5].rotation = QuaternionMultiply(QuaternionFromAxisAngle({ 0,1,0 }, -90 * DEG2RAD), QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD));
 
 	for (size_t i = 0; i < 6; i++)
 	{
-		box->quads[i].position = planes[i].position;
+		box->quads[i].position = Vector3Add(box->position, planes[i].position);
 		box->quads[i].scale = planes[i].scale;
-		box->quads[i].rotation = planes[i].rotation;
+		box->quads[i].rotation = QuaternionMultiply(box->rotation, planes[i].rotation);
 	}
 }
 #pragma endregion
@@ -702,8 +748,8 @@ int main(int argc, char* argv[])
 
 	//BALL
 	Ball ball = {};
-	ball.position = { 0,10,0 };
-	ball.radius = .25f;
+	ball.position = { 0,2,0 };
+	ball.radius = .1f;
 	ball.velocity = { 0,0,0 };
 	ball.bounciness = 10;
 
@@ -711,23 +757,46 @@ int main(int argc, char* argv[])
 	std::vector<Plane> planes;
 
 	Plane plane = {};
-	plane.position = { 1,0,0 };
+	plane.position = { 0,0,0 };
 	plane.scale = { 5, 5 };
 	plane.rotation = QuaternionIdentity();
 
+	Plane plane1 = {};
+	plane1.position = { 2.5f,2.5f,0 };
+	plane1.scale = { 5, 5 };
+	plane1.rotation = QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD);
+
+	Plane plane2 = {};
+	plane2.position = { -2.5f,2.5f,0 };
+	plane2.scale = { 5, 5 };
+	plane2.rotation = QuaternionFromAxisAngle({ 0,0,1 }, -90 * DEG2RAD);
+
+	Plane plane3 = {};
+	plane3.position = { 0,2.5f,2.5f };
+	plane3.scale = { 5, 5 };
+	plane3.rotation = QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD);
+
+	Plane plane4 = {};
+	plane4.position = { 0,2.5f,-2.5f };
+	plane4.scale = { 5, 5 };
+	plane4.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD);
+
+	Plane plane5 = {};
+	plane5.position = { 0,5,0 };
+	plane5.scale = { 5, 5 };
+	plane5.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 180 * DEG2RAD);
+
 	planes.push_back(plane);
-
-
-	Capsule capsule = {};
-	capsule.position = { 2,0,0 };
-	capsule.scale = { .5f, 1 };
-	capsule.rotation = QuaternionFromAxisAngle({ 1,0,1 }, 45 * DEG2RAD);
-	CreateCapsule(&capsule);
+	planes.push_back(plane1);
+	planes.push_back(plane2);
+	planes.push_back(plane3);
+	planes.push_back(plane4);
+	planes.push_back(plane5);
 
 	Box box = {};
-	box.position = { 0, 0, 0 };
-	box.rotation = QuaternionIdentity();
-	box.scale = { 1,2,1 };
+	box.position = { 0, 1, 0 };
+	box.rotation = QuaternionFromAxisAngle({ 1,1,1 }, 35 * DEG2RAD);
+	box.scale = { 3,.5f,3 };
 	CreateBox(&box);
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -743,7 +812,7 @@ int main(int argc, char* argv[])
 		Quaternion qOrient2 = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
-		UpdateBall(&ball, deltaTime, planes);
+		UpdateBall(&ball, deltaTime, planes, box);
 
 		Sphere sphere = Sphere{};
 		sphere.position = ball.position;
@@ -764,8 +833,6 @@ int main(int argc, char* argv[])
 			}
 
 			MyDrawSphere(sphere, 10, 10, GREEN);
-
-			//MyDrawCapsule(capsule, 10, RED);
 
 			MyDrawBox(box, RED);
 
