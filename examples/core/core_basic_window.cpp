@@ -110,6 +110,15 @@ struct Capsule
 	Cylinder cyl;
 };
 
+struct Box
+{
+	Vector3 position;
+	Vector3 scale;
+	Quaternion rotation;
+
+	Plane quads[6] = {};
+};
+
 struct Ball
 {
 	Vector3 position;
@@ -300,18 +309,17 @@ void MyDrawQuad(Plane plane, Color color) {
 
 	// Front face
 	float width = plane.scale.x;
-	float height = plane.scale.y;
-	float length = height;
+	float length = plane.scale.y;
 
 	// by default facing up 
 
-	rlVertex3f(plane.position.x - width / 2, 0, plane.position.z - length / 2);  // Top Left
-	rlVertex3f(plane.position.x - width / 2, 0, plane.position.z + length / 2);  // Bottom Left
-	rlVertex3f(plane.position.x + width / 2, 0, plane.position.z + length / 2);  // Bottom Right
+	rlVertex3f(+ width / 2, 0, - length / 2);  // Top Left
+	rlVertex3f(- width / 2, 0, - length / 2);  // Bottom Left
+	rlVertex3f(- width / 2, 0, + length / 2);  // Bottom Right
 
-	rlVertex3f(plane.position.x + width / 2, 0, plane.position.z - length / 2);  // Top Right
-	rlVertex3f(plane.position.x - width / 2, 0, plane.position.z - length / 2);  // Top Left
-	rlVertex3f(plane.position.x + width / 2, 0, plane.position.z + length / 2);  // Bottom Right
+	rlVertex3f(+ width / 2, 0, + length / 2);  // Top Right
+	rlVertex3f(+ width / 2, 0, - length / 2);  // Top Left
+	rlVertex3f(- width / 2, 0, + length / 2);  // Bottom Right
 
 	rlEnd();
 	rlPopMatrix();
@@ -467,7 +475,12 @@ void MyDrawCapsule(Capsule capsule, float nSegmentsTheta, Color color) {
 	Sphere s2 = capsule.sph2;
 	MyDrawSphere(s2, nSegmentsTheta, nSegmentsTheta, color);
 }
-
+void MyDrawBox(Box box, Color color) {
+	for each (Plane quad in box.quads)
+	{
+		MyDrawQuad(quad, color);
+	}
+}
 void MyDrawDiskWires(Quaternion q, Vector3 position, float radius, int nSegmentsTheta, Color color) {
 
 }
@@ -613,7 +626,7 @@ void CreateCapsule(Capsule* capsule) {
 	Vector3 XAxis = Vector3RotateByQuaternion({ 0,1,0 }, capsule->rotation);
 
 	Sphere s1 = {};
-	s1.position = Vector3Add(capsule->position, Vector3Scale(XAxis,capsule->scale.y * 0.5f));
+	s1.position = Vector3Add(capsule->position, Vector3Scale(XAxis, capsule->scale.y * 0.5f));
 	s1.radius = capsule->scale.x;
 
 	Sphere s2 = {};
@@ -623,6 +636,45 @@ void CreateCapsule(Capsule* capsule) {
 	capsule->cyl = cyl;
 	capsule->sph1 = s1;
 	capsule->sph2 = s2;
+}
+
+void CreateBox(Box* box) {
+	Plane planes[6] = {};
+
+	Vector3 XAxis = Vector3RotateByQuaternion({ 1,0,0 }, box->rotation);
+	Vector3 YAxis = Vector3RotateByQuaternion({ 0,1,0 }, box->rotation);
+	Vector3 ZAxis = Vector3RotateByQuaternion({ 0,0,1 }, box->rotation);
+
+	planes[0].scale = { box->scale.x, box->scale.y };
+	planes[0].position = Vector3Scale(ZAxis, box->scale.z * .5f);
+	planes[0].rotation = QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD));
+
+	planes[1].scale = { box->scale.x, box->scale.y };
+	planes[1].position = Vector3Scale(ZAxis, -box->scale.z * .5f);
+	planes[1].rotation = QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD));
+
+	//planes[2].position = Vector3Add(box->position, Vector3Scale(YAxis, box->scale.y * 0.5f));
+	//planes[2].scale = { box->scale.x, box->scale.z };
+	//planes[2].rotation = box->rotation;
+
+	//planes[3].position = Vector3Add(box->position, Vector3Scale(YAxis, -box->scale.y * 0.5f));
+	//planes[3].scale = { box->scale.x, box->scale.z };
+	//planes[3].rotation = box->rotation;
+
+	planes[4].position = Vector3Scale(XAxis, box->scale.x * .5f);
+	planes[4].scale = { box->scale.z, box->scale.y };
+	planes[4].rotation = box->rotation; //QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD));
+
+	/*planes[5].position = Vector3Scale(XAxis, -box->scale.x * .5f);
+	planes[5].scale = { box->scale.z, box->scale.y };
+	planes[5].rotation = box->rotation; *///QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 0,0,1 }, -90 * DEG2RAD));
+
+	for (size_t i = 0; i < 6; i++)
+	{
+		box->quads[i].position = planes[i].position;
+		box->quads[i].scale = planes[i].scale;
+		box->quads[i].rotation = planes[i].rotation;
+	}
 }
 #pragma endregion
 
@@ -659,18 +711,11 @@ int main(int argc, char* argv[])
 	std::vector<Plane> planes;
 
 	Plane plane = {};
-	plane.position = { 0,0,0 };
-	plane.scale = { 20, 20 };
-	plane.rotation = QuaternionFromAxisAngle({ 1,0,0 }, -5 * DEG2RAD);
+	plane.position = { 1,0,0 };
+	plane.scale = { 5, 5 };
+	plane.rotation = QuaternionIdentity();
 
 	planes.push_back(plane);
-
-	Plane plane1 = {};
-	plane1.position = { 0,0,-10 };
-	plane1.scale = { 20, 20 };
-	plane1.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD);
-
-	planes.push_back(plane1);
 
 
 	Capsule capsule = {};
@@ -678,6 +723,12 @@ int main(int argc, char* argv[])
 	capsule.scale = { .5f, 1 };
 	capsule.rotation = QuaternionFromAxisAngle({ 1,0,1 }, 45 * DEG2RAD);
 	CreateCapsule(&capsule);
+
+	Box box = {};
+	box.position = { 0, 0, 0 };
+	box.rotation = QuaternionIdentity();
+	box.scale = { 1,2,1 };
+	CreateBox(&box);
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
@@ -714,7 +765,9 @@ int main(int argc, char* argv[])
 
 			MyDrawSphere(sphere, 10, 10, GREEN);
 
-			MyDrawCapsule(capsule, 10,RED);
+			//MyDrawCapsule(capsule, 10, RED);
+
+			MyDrawBox(box, RED);
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
