@@ -645,7 +645,6 @@ void MyUpdateOrbitalCamera(Camera* camera, float deltaTime)
 void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vector<Box> boxes) {
 	ball->velocity.y += -9.81 * deltaTime;
 
-
 	Vector3 nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
 
 	Segment collisionSeg = {};
@@ -833,7 +832,12 @@ int main(int argc, char* argv[])
 	planes.push_back(plane5);
 
 	std::vector<Box> boxes;
-	GenerateTerrain(3, &boxes);
+	GenerateTerrain(5, &boxes);
+
+
+	Sphere sphere = Sphere{};
+	sphere.rotation = { 0,0,0,1 };
+	sphere.radius = ball.radius;
 
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -850,11 +854,7 @@ int main(int argc, char* argv[])
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
 		UpdateBall(&ball, deltaTime, planes, boxes);
-
-		Sphere sphere = Sphere{};
 		sphere.position = ball.position;
-		sphere.rotation = { 0,0,0,1 };
-		sphere.radius = ball.radius;
 
 		// Draw
 		//----------------------------------------------------------------------------------
