@@ -25,6 +25,8 @@
 #include <math.h>
 #include <float.h>
 #include <vector>
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 
 #if defined(PLATFORM_DESKTOP)
 #define GLSL_VERSION            330
@@ -326,9 +328,6 @@ void MyDrawQuad(Plane plane, Color color) {
 }
 void MyDrawQuadWire(Plane plane, Color color) {
 
-	float x = 0.0f;
-	float y = 0.0f;
-	float z = 0.0f;
 	float width = plane.scale.x;
 	float height = plane.scale.y;
 	float length = height;
@@ -350,27 +349,27 @@ void MyDrawQuadWire(Plane plane, Color color) {
 
 	// facing up by default
 
-	rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
-	rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
+	rlVertex3f(-width / 2, 0, -length / 2);  // Bottom Left
+	rlVertex3f(+width / 2, 0, -length / 2);  // Bottom Right
 
 	// Left Line
-	rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
-	rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
+	rlVertex3f(+width / 2, 0, -length / 2);  // Bottom Right
+	rlVertex3f(+width / 2, 0, +length / 2);  // Top Right
 
 	// Top Line
-	rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
-	rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
+	rlVertex3f(+width / 2, 0, +length / 2);  // Top Right
+	rlVertex3f(-width / 2, 0, +length / 2);  // Top Left
 
 	// Right Line
-	rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
-	rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
+	rlVertex3f(-width / 2, 0, +length / 2);  // Top Left
+	rlVertex3f(-width / 2, 0, -length / 2);  // Bottom Left
 
 	//Diagonal
-	rlVertex3f(x - width / 2, y, z + length / 2);  // Top Left
-	rlVertex3f(x + width / 2, y, z - length / 2);  // Bottom Right
+	rlVertex3f(-width / 2, 0, +length / 2);  // Top Left
+	rlVertex3f(+width / 2, 0, -length / 2);  // Bottom Right
 
-	rlVertex3f(x + width / 2, y, z + length / 2);  // Top Right
-	rlVertex3f(x - width / 2, y, z - length / 2);  // Bottom Left
+	rlVertex3f(+width / 2, 0, +length / 2);  // Top Right
+	rlVertex3f(-width / 2, 0, -length / 2);  // Bottom Left
 
 	rlEnd();
 	rlPopMatrix();
@@ -481,6 +480,13 @@ void MyDrawBox(Box box, Color color) {
 		MyDrawQuad(quad, color);
 	}
 }
+
+void MyDrawBoxWire(Box box, Color color) {
+	for each (Plane quad in box.quads)
+	{
+		MyDrawQuadWire(quad, color);
+	}
+}
 void MyDrawDiskWires(Quaternion q, Vector3 position, float radius, int nSegmentsTheta, Color color) {
 
 }
@@ -553,9 +559,17 @@ bool InterSegmentQuad(Segment seg, Plane plane, Vector3& interPt, Vector3& inter
 		Vector3 B = { plane.position.x - plane.scale.x * .5f, plane.position.y,  plane.position.z + plane.scale.y * .5f };
 		Vector3 C = { plane.position.x + plane.scale.x * .5f, plane.position.y,  plane.position.z - plane.scale.y * .5f };
 
-		A = Vector3RotateByQuaternion(A, plane.rotation);
-		B = Vector3RotateByQuaternion(B, plane.rotation);
-		C = Vector3RotateByQuaternion(C, plane.rotation);
+		Vector3 tempA = Vector3Subtract(A, plane.position);
+		Vector3 rotatedA = Vector3RotateByQuaternion(tempA, plane.rotation);
+		A = Vector3Add(rotatedA, plane.position);
+
+		Vector3 tempB = Vector3Subtract(B, plane.position);
+		Vector3 rotatedB = Vector3RotateByQuaternion(tempB, plane.rotation);
+		B = Vector3Add(rotatedB, plane.position);
+
+		Vector3 tempC = Vector3Subtract(C, plane.position);
+		Vector3 rotatedC = Vector3RotateByQuaternion(tempC, plane.rotation);
+		C = Vector3Add(rotatedC, plane.position);
 
 		Vector3 AinterPt = Vector3Subtract(interPt, A);
 		Vector3 AC = Vector3Subtract(C, A);
@@ -564,16 +578,17 @@ bool InterSegmentQuad(Segment seg, Plane plane, Vector3& interPt, Vector3& inter
 		float dot1 = Vector3DotProduct(AinterPt, AC);
 		float dot2 = Vector3DotProduct(AinterPt, AB);
 
-		return  0 < dot1 && dot1 < Vector3DotProduct(AC, AC) && 0 < dot2 && dot2 < Vector3DotProduct(AB, AB);
+		return  0 <= dot1 && dot1 <= Vector3DotProduct(AC, AC) && 0 <= dot2 && dot2 <= Vector3DotProduct(AB, AB);
 	}
 
 	return false;
 }
 
 bool InterSegmentBox(Segment seg, Box box, Vector3& interPt, Vector3& interNormal) {
-	for each (Plane plane in box.quads) {
-		if (InterSegmentQuad(seg, plane, interPt, interNormal)) 
+	for each (Plane quad in box.quads) {
+		if (InterSegmentQuad(seg, quad, interPt, interNormal)) {
 			return true;
+		}
 	}
 
 	return false;
@@ -627,7 +642,7 @@ void MyUpdateOrbitalCamera(Camera* camera, float deltaTime)
 	camera->position = SphericalToCartesian(sphPos);
 }
 
-void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, Box box) {
+void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vector<Box> boxes) {
 	ball->velocity.y += -9.81 * deltaTime;
 
 
@@ -636,11 +651,10 @@ void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, Box box)
 	Segment collisionSeg = {};
 	collisionSeg.p1 = ball->position;
 	collisionSeg.p2 = nextPosition;
-
+	Vector3 interPt;
+	Vector3 interNormal;
 	for each (Plane plane in planes)
 	{
-		Vector3 interPt;
-		Vector3 interNormal;
 		if (InterSegmentQuad(collisionSeg, plane, interPt, interNormal)) {
 			ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
 			nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
@@ -649,17 +663,17 @@ void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, Box box)
 		collisionSeg.p2 = nextPosition;
 	}
 
-	Vector3 interPt;
-	Vector3 interNormal;
-	
-	if (InterSegmentBox(collisionSeg, box, interPt, interNormal)) {
-		ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
-		nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+	for each (Box box in boxes)
+	{
+		if (InterSegmentBox(collisionSeg, box, interPt, interNormal)) {
+			ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
+			nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+		}
+		collisionSeg.p1 = ball->position;
+		collisionSeg.p2 = nextPosition;
 	}
-	collisionSeg.p1 = ball->position;
-	collisionSeg.p2 = nextPosition;
 
-	ball->velocity = Vector3Scale(Vector3Normalize(ball->velocity), 5);
+	ball->velocity = Vector3Scale(Vector3Normalize(ball->velocity), ball->bounciness);
 	ball->position = nextPosition;
 }
 
@@ -722,6 +736,31 @@ void CreateBox(Box* box) {
 		box->quads[i].rotation = QuaternionMultiply(box->rotation, planes[i].rotation);
 	}
 }
+
+float RandomFloat(float LO, float HI, int key = 0) {
+	srand(rand());
+	float r = LO + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (HI - LO)));
+	return r;
+}
+
+int RandomInt(int LO, int HI, int key = 0) {
+	srand(rand());
+	int r = rand() % (HI - LO + 1) + LO;
+	return r;
+}
+
+void GenerateTerrain(size_t boxNum, std::vector<Box> * boxes) {
+	for (size_t i = 0; i < boxNum; i++)
+	{
+		Box box = {};
+		box.position = { (float)RandomInt(-2,2), (float)RandomInt(0,5), (float)RandomInt(-2,2) };
+		box.rotation = QuaternionFromAxisAngle({ 1,1,1 }, RandomInt(0, 360) * DEG2RAD);
+		box.scale = { (float)RandomInt(1,3),1,(float)RandomInt(1,3) };
+		CreateBox(&box);
+
+		boxes->push_back(box);
+	}
+}
 #pragma endregion
 
 int main(int argc, char* argv[])
@@ -750,7 +789,7 @@ int main(int argc, char* argv[])
 	Ball ball = {};
 	ball.position = { 0,2,0 };
 	ball.radius = .1f;
-	ball.velocity = { 0,0,0 };
+	ball.velocity = { 5,0,0 };
 	ball.bounciness = 10;
 
 	//Planes
@@ -793,11 +832,9 @@ int main(int argc, char* argv[])
 	planes.push_back(plane4);
 	planes.push_back(plane5);
 
-	Box box = {};
-	box.position = { 0, 1, 0 };
-	box.rotation = QuaternionFromAxisAngle({ 1,1,1 }, 35 * DEG2RAD);
-	box.scale = { 3,.5f,3 };
-	CreateBox(&box);
+	std::vector<Box> boxes;
+	GenerateTerrain(3, &boxes);
+
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
@@ -812,7 +849,7 @@ int main(int argc, char* argv[])
 		Quaternion qOrient2 = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
-		UpdateBall(&ball, deltaTime, planes, box);
+		UpdateBall(&ball, deltaTime, planes, boxes);
 
 		Sphere sphere = Sphere{};
 		sphere.position = ball.position;
@@ -830,11 +867,17 @@ int main(int argc, char* argv[])
 			for each (Plane plane in planes)
 			{
 				MyDrawQuad(plane, BLUE);
+				MyDrawQuadWire(plane, WHITE);
+			}
+
+			for each (Box box in boxes)
+			{
+				MyDrawBox(box, RED);
+				MyDrawBoxWire(box, WHITE);
 			}
 
 			MyDrawSphere(sphere, 10, 10, GREEN);
-
-			MyDrawBox(box, RED);
+			MyDrawSphereWires(sphere, 10, 10, WHITE);
 
 			//3D REFERENTIAL
 			DrawGrid(20, 1.0f);        // Draw a grid
