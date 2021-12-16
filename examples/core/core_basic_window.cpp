@@ -642,7 +642,7 @@ void MyUpdateOrbitalCamera(Camera* camera, float deltaTime)
 	camera->position = SphericalToCartesian(sphPos);
 }
 
-void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vector<Box> boxes) {
+void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vector<Box> boxes, std::vector<Sphere> spheres) {
 	ball->velocity.y += -9.81 * deltaTime;
 
 	Vector3 nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
@@ -672,8 +672,20 @@ void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vec
 		collisionSeg.p2 = nextPosition;
 	}
 
+	for each (Sphere sphere in spheres)
+	{
+		if (InterSegmentSphere(collisionSeg, sphere, interPt, interNormal)) {
+			ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
+			nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+		}
+		collisionSeg.p1 = ball->position;
+		collisionSeg.p2 = nextPosition;
+	}
+
 	ball->velocity = Vector3Scale(Vector3Normalize(ball->velocity), ball->bounciness);
 	ball->position = nextPosition;
+
+	if (ball->position.y < 0) ball->position = { 0,2.5f,0 };
 }
 
 void CreateCapsule(Capsule* capsule) {
@@ -748,7 +760,7 @@ int RandomInt(int LO, int HI, int key = 0) {
 	return r;
 }
 
-void GenerateTerrain(size_t boxNum, std::vector<Box> * boxes) {
+void GenerateTerrain(size_t boxNum, std::vector<Box>* boxes, size_t sphereNum, std::vector<Sphere>* spheres) {
 	for (size_t i = 0; i < boxNum; i++)
 	{
 		Box box = {};
@@ -756,9 +768,17 @@ void GenerateTerrain(size_t boxNum, std::vector<Box> * boxes) {
 		box.rotation = QuaternionFromAxisAngle({ 1,1,1 }, RandomInt(0, 360) * DEG2RAD);
 		box.scale = { (float)RandomInt(1,3),1,(float)RandomInt(1,3) };
 		CreateBox(&box);
-
 		boxes->push_back(box);
 	}
+	for (size_t i = 0; i < sphereNum; i++)
+	{
+		Sphere sphere = {};
+		sphere.position = { (float)RandomInt(-1,1), (float)RandomInt(1,3), (float)RandomInt(-1,1) };
+		sphere.rotation = QuaternionIdentity();
+		sphere.radius = RandomFloat(.5f, 1.0f);
+		spheres->push_back(sphere);
+	}
+
 }
 #pragma endregion
 
@@ -789,7 +809,7 @@ int main(int argc, char* argv[])
 	ball.position = { 0,2,0 };
 	ball.radius = .1f;
 	ball.velocity = { 5,0,0 };
-	ball.bounciness = 10;
+	ball.bounciness = 7;
 
 	//Planes
 	std::vector<Plane> planes;
@@ -832,7 +852,8 @@ int main(int argc, char* argv[])
 	planes.push_back(plane5);
 
 	std::vector<Box> boxes;
-	GenerateTerrain(5, &boxes);
+	std::vector<Sphere> spheres;
+	GenerateTerrain(5, &boxes, 3, &spheres);
 
 
 	Sphere sphere = Sphere{};
@@ -853,8 +874,13 @@ int main(int argc, char* argv[])
 		Quaternion qOrient2 = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
-		UpdateBall(&ball, deltaTime, planes, boxes);
+		UpdateBall(&ball, deltaTime, planes, boxes, spheres);
 		sphere.position = ball.position;
+		for (size_t i = 0; i < boxes.size(); i++)
+		{
+			boxes[i].rotation = QuaternionFromAxisAngle({ 1,1,1 }, time * 10 * DEG2RAD);
+			CreateBox(&boxes[i]);
+		}
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -867,13 +893,19 @@ int main(int argc, char* argv[])
 			for each (Plane plane in planes)
 			{
 				MyDrawQuad(plane, BLUE);
-				MyDrawQuadWire(plane, WHITE);
+				//MyDrawQuadWire(plane, WHITE);
 			}
 
 			for each (Box box in boxes)
 			{
 				MyDrawBox(box, RED);
-				MyDrawBoxWire(box, WHITE);
+				//MyDrawBoxWire(box, WHITE);
+			}
+
+			for each (Sphere sphere in spheres)
+			{
+				MyDrawSphere(sphere, 10, 10, PURPLE);
+				//MyDrawBoxWire(box, WHITE);
 			}
 
 			MyDrawSphere(sphere, 10, 10, GREEN);
