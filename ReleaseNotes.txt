@@ -1,0 +1,30 @@
+A partir du dossier courant se rendre dans :
+
+projects\VS2019
+
+Exécuter:
+
+raylib.sln
+
+
+BUGS:
+
+La balle traverse de temps en temps les paroies
+=> sa position est réinitialisée si sa position Y est négative
+
+Voies d'amélioration:
+
+Nous avons toutes les collisions pour la rounded box, il faut maintenant la construire
+=> manque de temps et d'organisation sans doute
+
+Rôles:
+
+Raj Porus :
+
+J'ai codé toutes les méthodes d'affichage dans la région Drawers
+Je me suis occupé de guider la gestion de version du projet
+
+Antonin :
+
+J'ai mis sous forme de code les equations d'intersection des différentes formes primitives avec un segment que nous avons résolu ensemble.
+J'ai codé la plupart des fonctions dans la région : Methodes
