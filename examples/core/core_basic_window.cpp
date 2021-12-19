@@ -539,12 +539,15 @@ bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interN
 
 bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
 
-	Vector3 diff = Vector3Subtract(seg.p1, plane.position);
-	Vector3 lineVector = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
+	Vector3 OA = Vector3Subtract(seg.p1, plane.position);
+	Vector3 dir = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
 	Vector3 planeNormal = Vector3RotateByQuaternion({ 0,1,0 }, plane.rotation);
-	Vector3 planePoint = plane.position;
+	Vector3 O = plane.position;
 
-	interPt = Vector3Add(Vector3Add(diff, planePoint), Vector3Scale(lineVector, -Vector3DotProduct(diff, planeNormal) / Vector3DotProduct(lineVector, planeNormal)));
+	double a = -Vector3DotProduct(OA, planeNormal);
+	double b = Vector3DotProduct(dir, planeNormal);
+
+	interPt = Vector3Add(Vector3Add(OA, O), Vector3Scale(dir, a / b));
 	interNormal = planeNormal;
 
 	return Vector3Distance(seg.p1, interPt) <= Vector3Distance(seg.p1, seg.p2);
@@ -575,10 +578,10 @@ bool InterSegmentQuad(Segment seg, Plane plane, Vector3& interPt, Vector3& inter
 		Vector3 AC = Vector3Subtract(C, A);
 		Vector3 AB = Vector3Subtract(B, A);
 
-		float dot1 = Vector3DotProduct(AinterPt, AC);
-		float dot2 = Vector3DotProduct(AinterPt, AB);
+		float AIAC = Vector3DotProduct(AinterPt, AC);
+		float AIAB = Vector3DotProduct(AinterPt, AB);
 
-		return  0 <= dot1 && dot1 <= Vector3DotProduct(AC, AC) && 0 <= dot2 && dot2 <= Vector3DotProduct(AB, AB);
+		return  0 <= AIAC && AIAC <= Vector3DotProduct(AC, AC) && 0 <= AIAB && AIAB <= Vector3DotProduct(AB, AB);
 	}
 
 	return false;
@@ -599,8 +602,43 @@ bool InterSegmentInfiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, V
 }
 
 bool InterSegmentFiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
-	return false;
+
+	Vector3 cylDir = Vector3RotateByQuaternion({ 0,1,0 }, cyl.rotation);
+
+	Vector3 A = Vector3Add(cyl.position, Vector3Scale(cylDir, -cyl.scale.y * .5f));
+	Vector3 B = Vector3Add(cyl.position, Vector3Scale(cylDir, cyl.scale.y * .5f));
+	float r = cyl.scale.x;
+	Vector3 start = seg.p1;
+	Vector3 dir = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
+
+	double cxmin, cymin, czmin, cxmax, cymax, czmax;
+	if (A.z < B.z) { czmin = A.z - r; czmax = B.z + r; }
+	else { czmin = B.z - r; czmax = A.z + r; }
+	if (A.y < B.y) { cymin = A.y - r; cymax = B.y + r; }
+	else { cymin = B.y - r; cymax = A.y + r; }
+	if (A.x < B.x) { cxmin = A.x - r; cxmax = B.x + r; }
+	else { cxmin = B.x - r; cxmax = A.x + r; }
+
+	Vector3 AB = Vector3Subtract(B, A);
+	Vector3 AO = Vector3Subtract(start, A);
+	Vector3 AOxAB = Vector3CrossProduct(AO, AB);
+	Vector3 VxAB = Vector3CrossProduct(dir, AB);
+	double ab2 = Vector3DotProduct(AB, AB);
+	double a = Vector3DotProduct(VxAB, VxAB);
+	double b = 2 * Vector3DotProduct(VxAB, AOxAB);
+	double c = Vector3DotProduct(AOxAB, AOxAB) - (r * r * ab2);
+	double d = b * b - 4 * a * c;
+	if (d <= 0) return false;
+	double time = (-b - sqrt(d)) / (2 * a);
+	if (time < 0) return false;
+
+	interPt = Vector3Add(start, Vector3Scale(dir, time));
+	Vector3 projection = Vector3Add(A, Vector3Scale(AB, (Vector3DotProduct(AB, Vector3Subtract(interPt, A)) / ab2)));
+	if (Vector3Length(Vector3Subtract(projection, A)) + Vector3Length(Vector3Subtract(B, projection)) > Vector3Length(AB) || Vector3Distance(start, interPt) > Vector3Distance(seg.p1, seg.p2)) return false;
+	interNormal = Vector3Normalize(Vector3Subtract(interPt, projection));
+	return true;
 }
+
 bool InterSegmentCapsule(Segment seg, Capsule capsule, Vector3& interPt, Vector3& interNormal) {
 
 	Sphere s1 = capsule.sph1;
@@ -611,6 +649,17 @@ bool InterSegmentCapsule(Segment seg, Capsule capsule, Vector3& interPt, Vector3
 }
 
 bool InterSegmentDisk(Segment seg, Disk disk, Vector3& interPt, Vector3& interNormal) {
+	Plane plane = Plane{};
+	plane.position = disk.position;
+	plane.rotation = disk.rotation;
+	plane.scale = { 1 };
+
+	if (InterSegmentPlane(seg, plane, interPt, interNormal)) {
+		if (Vector3Distance(plane.position, interPt) <= disk.radius * .5f) {
+			return true;
+		}
+	}
+
 	return false;
 }
 #pragma endregion
@@ -642,7 +691,7 @@ void MyUpdateOrbitalCamera(Camera* camera, float deltaTime)
 	camera->position = SphericalToCartesian(sphPos);
 }
 
-void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vector<Box> boxes, std::vector<Sphere> spheres) {
+void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vector<Box> boxes, std::vector<Sphere> spheres, std::vector<Capsule> capsules) {
 	ball->velocity.y += -9.81 * deltaTime;
 
 	Vector3 nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
@@ -682,10 +731,20 @@ void UpdateBall(Ball* ball, float deltaTime, std::vector<Plane> planes, std::vec
 		collisionSeg.p2 = nextPosition;
 	}
 
+	for each (Capsule capsule in capsules)
+	{
+		if (InterSegmentCapsule(collisionSeg, capsule, interPt, interNormal)) {
+			ball->velocity = Vector3Add(ball->velocity, Vector3Scale(interNormal, ball->bounciness));
+			nextPosition = Vector3Add(ball->position, Vector3Scale(ball->velocity, deltaTime));
+		}
+		collisionSeg.p1 = ball->position;
+		collisionSeg.p2 = nextPosition;
+	}
+
 	ball->velocity = Vector3Scale(Vector3Normalize(ball->velocity), ball->bounciness);
 	ball->position = nextPosition;
 
-	if (ball->position.y < 0) ball->position = { 0,2.5f,0 };
+	if (ball->position.y < -1) ball->position = { 0,2.5f,0 };
 }
 
 void CreateCapsule(Capsule* capsule) {
@@ -734,7 +793,7 @@ void CreateBox(Box* box) {
 
 	planes[4].position = Vector3Scale(XAxis, box->scale.x * .5f);
 	planes[4].scale = { box->scale.z, box->scale.y };
-	planes[4].rotation = QuaternionMultiply(QuaternionFromAxisAngle({ 0,1,0 }, -90 * DEG2RAD), QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD)); //QuaternionMultiply(box->rotation, QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD));
+	planes[4].rotation = QuaternionMultiply(QuaternionFromAxisAngle({ 0,1,0 }, -90 * DEG2RAD), QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD));
 
 	planes[5].position = Vector3Scale(XAxis, -box->scale.x * .5f);
 	planes[5].scale = { box->scale.z, box->scale.y };
@@ -760,25 +819,72 @@ int RandomInt(int LO, int HI, int key = 0) {
 	return r;
 }
 
-void GenerateTerrain(size_t boxNum, std::vector<Box>* boxes, size_t sphereNum, std::vector<Sphere>* spheres) {
-	for (size_t i = 0; i < boxNum; i++)
-	{
-		Box box = {};
-		box.position = { (float)RandomInt(-2,2), (float)RandomInt(0,5), (float)RandomInt(-2,2) };
-		box.rotation = QuaternionFromAxisAngle({ 1,1,1 }, RandomInt(0, 360) * DEG2RAD);
-		box.scale = { (float)RandomInt(1,3),1,(float)RandomInt(1,3) };
-		CreateBox(&box);
-		boxes->push_back(box);
-	}
-	for (size_t i = 0; i < sphereNum; i++)
-	{
-		Sphere sphere = {};
-		sphere.position = { (float)RandomInt(-1,1), (float)RandomInt(1,3), (float)RandomInt(-1,1) };
-		sphere.rotation = QuaternionIdentity();
-		sphere.radius = RandomFloat(.5f, 1.0f);
-		spheres->push_back(sphere);
-	}
+void GenerateTerrain(Vector2 scale, std::vector<Plane>* planes, std::vector<Box>* boxes, std::vector<Sphere>* spheres, std::vector<Capsule>* capsules) {
 
+	Plane plane = {};
+	plane.position = { 0,0,0 };
+	plane.scale = scale;
+	plane.rotation = QuaternionIdentity();
+
+	Plane plane1 = {};
+	plane1.position = { scale.x * .5f,2.5f,0 };
+	plane1.scale = { 5, scale.y };
+	plane1.rotation = QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD);
+
+	Plane plane2 = {};
+	plane2.position = { -scale.x * .5f,2.5f,0 };
+	plane2.scale = { 5, scale.y };
+	plane2.rotation = QuaternionFromAxisAngle({ 0,0,1 }, -90 * DEG2RAD);
+
+	Plane plane3 = {};
+	plane3.position = { 0,2.5f,scale.y * .5f };
+	plane3.scale = { scale.x, 5 };
+	plane3.rotation = QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD);
+
+	Plane plane4 = {};
+	plane4.position = { 0,2.5f,-scale.y * .5f };
+	plane4.scale = { scale.x, 5 };
+	plane4.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD);
+
+	Plane plane5 = {};
+	plane5.position = { 0,5,0 };
+	plane5.scale = scale;
+	plane5.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 180 * DEG2RAD);
+
+	planes->push_back(plane);
+	planes->push_back(plane1);
+	planes->push_back(plane2);
+	planes->push_back(plane3);
+	planes->push_back(plane4);
+	planes->push_back(plane5);
+
+	for (float x = -scale.x / 2.0f; x <= scale.x / 2.0f; x++)
+	{
+		for (float z = -scale.y / 2.0f; z <= scale.y / 2.0f; z++)
+		{
+			if (RandomInt(0, 2) == 0) {
+				Sphere sphere = {};
+				sphere.position = { (float)x, 1, (float)z };
+				sphere.rotation = QuaternionIdentity();
+				sphere.radius = RandomFloat(.1f, .5f);
+				spheres->push_back(sphere);
+			}
+			else {
+				Box box = {};
+				box.position = { (float)x, 1, (float)z };
+				box.rotation = QuaternionFromAxisAngle({ 1,1,1 }, RandomInt(0, 360) * DEG2RAD);
+				box.scale = { RandomFloat(.1f, .5f), RandomFloat(.1f, .5f), RandomFloat(.1f, .5f) };
+				CreateBox(&box);
+				boxes->push_back(box);
+			}
+		}
+	}
+	Capsule capsule = {};
+	capsule.position = { (float)0, 1, (float)0 };
+	capsule.rotation = QuaternionFromAxisAngle({ 1,1,1 }, RandomInt(0, 360) * DEG2RAD);
+	capsule.scale = { .25f, 1 };
+	CreateCapsule(&capsule);
+	capsules->push_back(capsule);
 }
 #pragma endregion
 
@@ -808,58 +914,19 @@ int main(int argc, char* argv[])
 	Ball ball = {};
 	ball.position = { 0,2,0 };
 	ball.radius = .1f;
-	ball.velocity = { 5,0,0 };
+	ball.velocity = { 1,0,0 };
 	ball.bounciness = 7;
-
-	//Planes
-	std::vector<Plane> planes;
-
-	Plane plane = {};
-	plane.position = { 0,0,0 };
-	plane.scale = { 5, 5 };
-	plane.rotation = QuaternionIdentity();
-
-	Plane plane1 = {};
-	plane1.position = { 2.5f,2.5f,0 };
-	plane1.scale = { 5, 5 };
-	plane1.rotation = QuaternionFromAxisAngle({ 0,0,1 }, 90 * DEG2RAD);
-
-	Plane plane2 = {};
-	plane2.position = { -2.5f,2.5f,0 };
-	plane2.scale = { 5, 5 };
-	plane2.rotation = QuaternionFromAxisAngle({ 0,0,1 }, -90 * DEG2RAD);
-
-	Plane plane3 = {};
-	plane3.position = { 0,2.5f,2.5f };
-	plane3.scale = { 5, 5 };
-	plane3.rotation = QuaternionFromAxisAngle({ 1,0,0 }, -90 * DEG2RAD);
-
-	Plane plane4 = {};
-	plane4.position = { 0,2.5f,-2.5f };
-	plane4.scale = { 5, 5 };
-	plane4.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 90 * DEG2RAD);
-
-	Plane plane5 = {};
-	plane5.position = { 0,5,0 };
-	plane5.scale = { 5, 5 };
-	plane5.rotation = QuaternionFromAxisAngle({ 1,0,0 }, 180 * DEG2RAD);
-
-	planes.push_back(plane);
-	planes.push_back(plane1);
-	planes.push_back(plane2);
-	planes.push_back(plane3);
-	planes.push_back(plane4);
-	planes.push_back(plane5);
-
-	std::vector<Box> boxes;
-	std::vector<Sphere> spheres;
-	GenerateTerrain(5, &boxes, 3, &spheres);
-
-
 	Sphere sphere = Sphere{};
-	sphere.rotation = { 0,0,0,1 };
+	sphere.rotation = QuaternionIdentity();
 	sphere.radius = ball.radius;
 
+	//Figures
+	std::vector<Plane> planes;
+	std::vector<Box> boxes;
+	std::vector<Sphere> spheres;
+	std::vector<Capsule> capsules;
+
+	GenerateTerrain({ 10, 10 }, &planes, &boxes, &spheres, &capsules);
 	// Main game loop
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
@@ -870,16 +937,22 @@ int main(int argc, char* argv[])
 
 		float deltaTime = GetFrameTime();
 		float time = (float)GetTime();
-		Quaternion qOrient = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
-		Quaternion qOrient2 = QuaternionFromAxisAngle(Vector3Normalize({ 1,3,-4 }), time);
 
 		MyUpdateOrbitalCamera(&camera, deltaTime);
-		UpdateBall(&ball, deltaTime, planes, boxes, spheres);
+
+		UpdateBall(&ball, deltaTime, planes, boxes, spheres, capsules);
 		sphere.position = ball.position;
+
 		for (size_t i = 0; i < boxes.size(); i++)
 		{
-			boxes[i].rotation = QuaternionFromAxisAngle({ 1,1,1 }, time * 10 * DEG2RAD);
+			boxes[i].rotation = QuaternionFromAxisAngle(boxes[i].position, time * 25 * DEG2RAD);
 			CreateBox(&boxes[i]);
+		}
+
+		for (size_t i = 0; i < capsules.size(); i++)
+		{
+			capsules[i].rotation = QuaternionFromAxisAngle({1,1,1}, time * 25 * DEG2RAD);
+			CreateCapsule(&capsules[i]);
 		}
 
 		// Draw
@@ -908,6 +981,12 @@ int main(int argc, char* argv[])
 				//MyDrawBoxWire(box, WHITE);
 			}
 
+			for each (Capsule capsule in capsules)
+			{
+				MyDrawCapsule(capsule, 10, RED);
+			}
+
+			// Draw ball
 			MyDrawSphere(sphere, 10, 10, GREEN);
 			MyDrawSphereWires(sphere, 10, 10, WHITE);
 
