@@ -282,15 +282,6 @@ void MyDrawSphereWires(Sphere sphere, int nSegmentsTheta, int nSegmentsPhi, Colo
 	rlPopMatrix();
 }
 
-void MyDrawSpherePortion(Sphere sph, float startTheta, float endTheta, float startPhi, float endPhi, int nSegmentsTheta, int nSegmentsPhi, Color color) {
-
-}
-
-void MyDrawSphereWiresPortion(Sphere sph, float startTheta, float endTheta, float startPhi, float endPhi, int nSegmentsTheta, int nSegmentsPhi, Color color) {
-
-}
-
-
 void MyDrawQuad(Plane plane, Color color) {
 
 	rlPushMatrix();
@@ -309,7 +300,6 @@ void MyDrawQuad(Plane plane, Color color) {
 	rlBegin(RL_TRIANGLES);
 	rlColor4ub(color.r, color.g, color.b, color.a);
 
-	// Front face
 	float width = plane.scale.x;
 	float length = plane.scale.y;
 
@@ -462,9 +452,6 @@ void MyDrawCylinder(Cylinder cyl, int nSegmentsTheta, Color color) {
 	rlEnd();
 	rlPopMatrix();
 }
-void MyDrawCylinderWires(Quaternion q, Cylinder cyl, int nSegmentsTheta, bool drawCaps, Color color) {
-
-}
 
 void MyDrawCapsule(Capsule capsule, float nSegmentsTheta, Color color) {
 	Cylinder cyl = capsule.cyl;
@@ -486,24 +473,6 @@ void MyDrawBoxWire(Box box, Color color) {
 	{
 		MyDrawQuadWire(quad, color);
 	}
-}
-void MyDrawDiskWires(Quaternion q, Vector3 position, float radius, int nSegmentsTheta, Color color) {
-
-}
-
-void MyDrawDiskPortion(Quaternion q, Vector3 position, float radius, float startTheta, float endTheta, int nSegmentsTheta, Color color) {
-
-}
-
-void MyDrawDiskWiresPortion(Quaternion q, Vector3 position, float radius, float startTheta, float endTheta, int nSegmentsTheta, Color color) {
-
-}
-
-void MyDrawCylinderPortion(Quaternion q, Cylinder cyl, float startTheta, float endTheta, int nSegmentsTheta, bool drawCaps, Color color) {
-
-}
-void MyDrawCylinderWiresPortion(Quaternion q, Cylinder cyl, float startTheta, float endTheta, int nSegmentsTheta, bool drawCaps, Color color) {
-
 }
 #pragma endregion
 
@@ -594,10 +563,6 @@ bool InterSegmentBox(Segment seg, Box box, Vector3& interPt, Vector3& interNorma
 		}
 	}
 
-	return false;
-}
-
-bool InterSegmentInfiniteCylinder(Segment seg, Cylinder cyl, Vector3& interPt, Vector3& interNormal) {
 	return false;
 }
 
@@ -951,7 +916,7 @@ int main(int argc, char* argv[])
 
 		for (size_t i = 0; i < capsules.size(); i++)
 		{
-			capsules[i].rotation = QuaternionFromAxisAngle({1,1,1}, time * 25 * DEG2RAD);
+			capsules[i].rotation = QuaternionFromAxisAngle({ 1,1,1 }, time * 25 * DEG2RAD);
 			CreateCapsule(&capsules[i]);
 		}
 

@@ -2,10 +2,12 @@ A partir du dossier courant se rendre dans :
 
 projects\VS2019
 
-Exécuter:
-
+Pour 
+- Ouvrir le projet:
 raylib.sln
 
+- Visionner la démo
+Bouncing Ball Demo.mkv
 
 BUGS:
 
