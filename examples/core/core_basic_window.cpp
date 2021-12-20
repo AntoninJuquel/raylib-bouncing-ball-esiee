@@ -479,31 +479,29 @@ void MyDrawBoxWire(Box box, Color color) {
 #pragma region Intersections
 bool InterSegmentSphere(Segment seg, Sphere s, Vector3& interPt, Vector3& interNormal) {
 
-	double a, b, c, mu1, mu2;
+	double a, b, c, t1, t2;
 	double bb4ac;
-	Vector3 dp = Vector3Subtract(seg.p2, seg.p1);
+	Vector3 AB = Vector3Normalize(Vector3Subtract(seg.p2, seg.p1));
+	Vector3 AS = Vector3Subtract(seg.p1, s.position);
 
-	a = dp.x * dp.x + dp.y * dp.y + dp.z * dp.z;
-	b = 2 * (dp.x * (seg.p1.x - s.position.x) + dp.y * (seg.p1.y - s.position.y) + dp.z * (seg.p1.z - s.position.z));
-	c = s.position.x * s.position.x + s.position.y * s.position.y + s.position.z * s.position.z;
-	c += seg.p1.x * seg.p1.x + seg.p1.y * seg.p1.y + seg.p1.z * seg.p1.z;
-	c -= 2 * (s.position.x * seg.p1.x + s.position.y * seg.p1.y + s.position.z * seg.p1.z);
-	c -= s.radius * s.radius;
+	a = Vector3DotProduct(AB, AB);
+	b = 2 * Vector3DotProduct(AB, AS);
+	c = Vector3DotProduct(s.position, s.position) + Vector3DotProduct(seg.p1, seg.p1) - 2 * Vector3DotProduct(s.position, seg.p1) - s.radius * s.radius;
 	bb4ac = b * b - 4 * a * c;
 
 	if (abs(a) < EPSILON || bb4ac < 0) {
-		mu1 = 0;
-		mu2 = 0;
+		t1 = 0;
+		t2 = 0;
 		return false;
 	}
 
-	mu1 = (-b + sqrt(bb4ac)) / (2 * a);
-	mu2 = (-b - sqrt(bb4ac)) / (2 * a);
+	t1 = (-b + sqrt(bb4ac)) / (2 * a);
+	t2 = (-b - sqrt(bb4ac)) / (2 * a);
 
-	interPt = Vector3Add(seg.p1, Vector3Scale(dp, mu1));
+	interPt = Vector3Add(seg.p1, Vector3Scale(AB, t2));
 	interNormal = Vector3Normalize(Vector3Subtract(interPt, s.position));
 
-	return true;
+	return Vector3Distance(interPt, seg.p1) <= Vector3Distance(seg.p1, seg.p2);
 }
 
 bool InterSegmentPlane(Segment seg, Plane plane, Vector3& interPt, Vector3& interNormal) {
@@ -827,7 +825,8 @@ void GenerateTerrain(Vector2 scale, std::vector<Plane>* planes, std::vector<Box>
 	{
 		for (float z = -scale.y / 2.0f; z <= scale.y / 2.0f; z++)
 		{
-			if (RandomInt(0, 2) == 0) {
+			int n = RandomInt(0, 4);
+			if (n == 0) {
 				Sphere sphere = {};
 				sphere.position = { (float)x, 1, (float)z };
 				sphere.rotation = QuaternionIdentity();
@@ -931,24 +930,24 @@ int main(int argc, char* argv[])
 			for each (Plane plane in planes)
 			{
 				MyDrawQuad(plane, BLUE);
-				//MyDrawQuadWire(plane, WHITE);
+				MyDrawQuadWire(plane, WHITE);
 			}
 
 			for each (Box box in boxes)
 			{
 				MyDrawBox(box, RED);
-				//MyDrawBoxWire(box, WHITE);
+				MyDrawBoxWire(box, WHITE);
 			}
 
 			for each (Sphere sphere in spheres)
 			{
 				MyDrawSphere(sphere, 10, 10, PURPLE);
-				//MyDrawBoxWire(box, WHITE);
+				MyDrawSphereWires(sphere, 10, 10, WHITE);
 			}
 
 			for each (Capsule capsule in capsules)
 			{
-				MyDrawCapsule(capsule, 10, RED);
+				MyDrawCapsule(capsule, 10, YELLOW);
 			}
 
 			// Draw ball

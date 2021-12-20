@@ -9,10 +9,35 @@ raylib.sln
 - Visionner la démo
 Bouncing Ball Demo.mkv
 
+Fonctionnalités:
+
+Il est possible de changer la taille de la salle et la manière de générer des boites et des spheres facilement à la ligne .... :
+
+- Pour la taille
+aller à la ligne 895
+modifier le 1 er argument de la méthode 
+GenerateTerrain(Vector2 scale, std::vector<Plane>* planes, std::vector<Box>* boxes, std::vector<Sphere>* spheres, std::vector<Capsule>* capsules);
+ceci aura pour effet de modifier la longueur et la largeur du terrain
+
+- Pour les boites
+A la ligne 830 on génère un nombre aléatoire entre 0 et X
+
+il suffit alors de modifier la condition à la ligne 838 qui s'occupe de générer une boite si elle est vraie
+
+- Pour les spheres
+A la ligne 830 on génère un nombre aléatoire entre 0 et X
+
+il suffit alors de modifier la condition à la ligne 831 qui s'occupe de générer une sphere si elle est vraie
+
 BUGS:
 
 La balle traverse de temps en temps les paroies
-=> sa position est réinitialisée si sa position Y est négative
+=> sa position est réinitialisée si sa position Y est inférieur à -1
+
+Les boites sont censée se générer à des tailles et rotations aléatoires.
+Cependant il arrive parfois que une séléction de boites aient exactement la même taille et rotation,
+ça doit être due à la seed qui par hasard se réactualise par la même valeur.
+Souvent il suffit de relancer le projet jusqu'à obtenir des boites assez différentes pour que l'étude soit intéressante.
 
 Voies d'amélioration:
 
